@@ -1,0 +1,134 @@
+<div class="dashboard">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>AI Employee</h2>
+
+        <ul>
+            <li class="active">🏠 Dashboard</li>
+            <li (click)="Chat()">💬 Chat</li>
+            <li>📊 Leads</li>
+            <li>📁 Documents</li>
+            <li>🎙 Voice</li>
+            <li>⚙ Settings</li>
+        </ul>
+
+        <button class="logout-btn" (click)="logout()">Logout</button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+
+        <!-- Top Bar -->
+        <div class="topbar">
+            <h3>Welcome back 👋</h3>
+            <div class="profile">👤 {{ user?.name }}</div>
+        </div>
+
+        <!-- Cards -->
+        <div class="cards">
+            <div class="card">
+                <h4>Total Conversations</h4>
+                <p>120</p>
+            </div>
+            <div class="card">
+                <h4>Leads Generated</h4>
+                <p>45</p>
+            </div>
+            <div class="card">
+                <h4>Hot Leads</h4>
+                <p class="hot">12</p>
+            </div>
+            <div class="card">
+                <h4>AI Accuracy</h4>
+                <p>92%</p>
+            </div>
+        </div>
+
+        <!-- Train AI Button -->
+        <div class="train-trigger" *ngIf="!showQuestionnaire && !showTrainBox">
+            <button class="btn-start-train" (click)="startTraining()">
+                {{ isTrained ? '✏️ Edit AI Training' : '🧠 Basic Training for Your AI Employee' }}
+            </button>
+        </div>
+
+        <!-- STEP 1: Questionnaire -->
+        <div class="ai-setup" *ngIf="showQuestionnaire && !showTrainBox">
+            <div class="q-header">
+                <h3>🧠 Train Your AI Employee</h3>
+                <p class="q-sub">Choose the correct answers — you can select multiple options per question</p>
+                <div class="q-progress-bar">
+                    <div class="q-progress-fill" [style.width.%]="progressPercent()"></div>
+                </div>
+                <span class="q-count">Question {{ currentQuestionIndex + 1 }} of {{ questions.length }}</span>
+            </div>
+
+            <!-- Single Question Card -->
+            <div class="q-card" *ngIf="currentQuestion">
+                <h4 class="q-title">{{ currentQuestionIndex + 1 }}. {{ currentQuestion.question }}</h4>
+
+                <div class="q-options">
+                    <button class="q-option" *ngFor="let opt of currentQuestion.options"
+                        [class.selected]="isSelected(opt)" (click)="selectOption(opt)">
+                        {{ opt }}
+                    </button>
+                </div>
+
+                <!-- Others text input -->
+                <div *ngIf="isSelected('Others')" class="q-others-input">
+                    <input type="text" [(ngModel)]="currentQuestion.othersText" placeholder="Please specify..." />
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="q-nav">
+                <button class="btn-prev" (click)="prevQuestion()" [disabled]="currentQuestionIndex === 0">
+                    ← Previous
+                </button>
+
+                <button class="btn-next" *ngIf="currentQuestionIndex < questions.length - 1"
+                    (click)="nextQuestion()" [disabled]="!hasAnswer()">
+                    Next →
+                </button>
+
+                <button class="btn-finish" *ngIf="currentQuestionIndex === questions.length - 1"
+                    (click)="finishQuestionnaire()" [disabled]="!hasAnswer()">
+                    ✅ Finish & Review
+                </button>
+            </div>
+        </div>
+
+        <!-- STEP 2: Train AI Box -->
+        <div class="ai-setup" *ngIf="showTrainBox">
+            <div class="train-header">
+                <h3>🧠 Train Your AI Employee</h3>
+                <button class="btn-redo" (click)="redoQuestionnaire()" *ngIf="!isTrained">
+                    ← Redo Questions
+                </button>
+            </div>
+
+            <div class="voice-box">
+                <textarea [(ngModel)]="trainingText" [disabled]="isTrained && !isEditing"
+                    placeholder="Describe your business, services, pricing...">
+                </textarea>
+
+                <button class="mic-btn" (click)="startListening()" [class.listening]="isListening">
+                    {{ isListening ? '🛑 Stop Listening' : '🎤 Speak' }}
+                </button>
+
+                <p class="mic-status" *ngIf="isListening">
+                    🔴 Listening... speak now, click Stop when done
+                </p>
+            </div>
+
+            <button *ngIf="!isTrained || isEditing" (click)="trainAI()">
+                {{ isTrained ? 'Update AI' : 'Save & Train AI' }}
+            </button>
+
+            <button *ngIf="isTrained && !isEditing" (click)="enableEdit()">
+                ✏ Edit
+            </button>
+        </div>
+
+    </div>
+</div>

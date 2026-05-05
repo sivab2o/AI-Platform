@@ -1,0 +1,48 @@
+<div class="login-wrapper container-fluid">
+
+  <div class="row justify-content-center align-items-center w-100">
+
+    <div class="col-11 col-sm-10 col-md-7 col-lg-4">
+
+      <div class="login-card">
+
+        <h2>Create Account ✨</h2>
+        <p class="subtitle">Signup to get started</p>
+
+        <form (ngSubmit)="onSubmit()">
+
+          <div class="input-group-custom">
+            <input type="text" [(ngModel)]="name" name="name" required />
+            <label>Name</label>
+          </div>
+
+          <div class="input-group-custom">
+            <input type="email" [(ngModel)]="email" name="email" required />
+            <label>Email</label>
+          </div>
+
+          <div class="input-group-custom">
+            <input type="tel" [(ngModel)]="mobile" name="mobile" required />
+            <label>Mobile Number</label>
+          </div>
+
+          <div class="input-group-custom">
+            <input type="password" [(ngModel)]="password" name="password" required />
+            <label>Password</label>
+          </div>
+
+          <button type="submit">Signup</button>
+        </form>
+
+        <p class="bottom-text">
+          Already have an account?
+          <span routerLink="/login">Login</span>
+        </p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

@@ -1,0 +1,38 @@
+<div class="login-wrapper container-fluid">
+
+  <div class="row justify-content-center align-items-center w-100">
+
+    <div class="col-11 col-sm-8 col-md-6 col-lg-4">
+
+      <div class="login-card">
+
+        <h2>Welcome Back 👋</h2>
+        <p class="subtitle">Login to continue</p>
+
+        <form (ngSubmit)="onSubmit()">
+
+          <div class="input-group-custom">
+            <input type="email" [(ngModel)]="email" name="email" required />
+            <label>Email</label>
+          </div>
+
+          <div class="input-group-custom">
+            <input type="password" [(ngModel)]="password" name="password" required />
+            <label>Password</label>
+          </div>
+
+          <button type="submit">Login</button>
+        </form>
+
+        <p class="bottom-text">
+          Don't have an account?
+          <span routerLink="/signup">Sign up</span>
+        </p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

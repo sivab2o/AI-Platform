@@ -1,0 +1,74 @@
+<div class="dashboard">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>AI Employee</h2>
+
+        <ul>
+            <li (click)="Dashboard()">🏠 Dashboard</li>
+            <li class="active">💬 Chat</li>
+            <li>📊 Leads</li>
+            <li>📁 Documents</li>
+            <li>🎙 Voice</li>
+            <li>⚙ Settings</li>
+        </ul>
+
+        <button class="logout-btn" (click)="logout()">Logout</button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+
+        <!-- Topbar -->
+        <div class="topbar">
+            <h3>Welcome back 👋</h3>
+            <div class="profile">👤 {{ user?.name }}</div>
+        </div>
+
+        <!-- Cards (KEEP SAME) -->
+        <div class="cards">
+            <div class="card">
+                <h4>Total Conversations</h4>
+                <p>120</p>
+            </div>
+
+            <div class="card">
+                <h4>Leads Generated</h4>
+                <p>45</p>
+            </div>
+
+            <div class="card">
+                <h4>Hot Leads</h4>
+                <p class="hot">12</p>
+            </div>
+
+            <div class="card">
+                <h4>AI Accuracy</h4>
+                <p>92%</p>
+            </div>
+        </div>
+
+        <!-- 🔥 CHAT SECTION (REPLACED) -->
+        <div class="chat-box">
+
+            <!-- Messages -->
+            <div class="chat-messages">
+                <div *ngFor="let msg of messages"
+                     [ngClass]="msg.sender === 'user' ? 'user-msg' : 'bot-msg'">
+                    {{ msg.text }}
+                </div>
+            </div>
+
+            <!-- Input -->
+            <div class="chat-input">
+                <input type="text"
+                       [(ngModel)]="userMessage"
+                       placeholder="Ask your AI employee..." />
+
+                <button (click)="sendMessage()">Send</button>
+            </div>
+
+        </div>
+
+    </div>
+</div>
