@@ -65,7 +65,8 @@ const login = (req, res) => {
           id: user.id,
           name: user.name,
           email: user.email,
-          mobile: user.mobile
+          mobile: user.mobile,
+          lang: user.lang
         }
       });
     });
