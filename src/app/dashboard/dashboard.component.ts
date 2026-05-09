@@ -4,6 +4,7 @@ import { Router, RouterModule } from '@angular/router';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { CommonModule } from '@angular/common';
+import { LanguageService } from '../services/language.service';
 
 interface TrainingQuestion {
   question: string;
@@ -26,16 +27,44 @@ export class DashboardComponent implements OnInit {
   isTrained: boolean = false;
   isEditing: boolean = false;
   isListening: boolean = false;
+  isTranslating: boolean = false;
   recognition: any;
 
-  // Flow control
   showQuestionnaire: boolean = false;
   showTrainBox: boolean = false;
-
-  // Questionnaire
   currentQuestionIndex: number = 0;
 
-  questions: TrainingQuestion[] = [
+  ui: any = {
+    welcome: 'Welcome back 👋',
+    totalConversations: 'Total Conversations',
+    leadsGenerated: 'Leads Generated',
+    hotLeads: 'Hot Leads',
+    aiAccuracy: 'AI Accuracy',
+    dashboard: 'Dashboard',
+    chat: 'Chat',
+    settings: 'Settings',
+    logout: 'Logout',
+    trainBtn: '🧠 Basic Training for Your AI Employee',
+    editTrainBtn: '✏️ Edit AI Training',
+    trainTitle: '🧠 Train Your AI Employee',
+    trainSub: 'Choose the correct answers — you can select multiple options per question',
+    question: 'Question',
+    of: 'of',
+    previous: '← Previous',
+    next: 'Next →',
+    finish: '✅ Finish & Review',
+    redoBtn: '← Redo Questions',
+    placeholder: 'Describe your business, services, pricing...',
+    speak: '🎤 Speak',
+    stopListening: '🛑 Stop Listening',
+    listeningMsg: '🔴 Listening... speak now, click Stop when done',
+    saveBtn: 'Save & Train AI',
+    updateBtn: 'Update AI',
+    editBtn: '✏ Edit',
+    specifyPlaceholder: 'Please specify...'
+  };
+
+  originalQuestions: TrainingQuestion[] = [
     {
       question: 'What type of business do you run?',
       options: ['IT / Software', 'Retail / E-commerce', 'Healthcare', 'Education', 'Real Estate', 'Finance / Accounting', 'Marketing / Agency', 'Manufacturing', 'Restaurant / Food', 'Others'],
@@ -46,11 +75,11 @@ export class DashboardComponent implements OnInit {
       options: ['Website Development', 'Mobile App Development', 'Digital Marketing / SEO', 'Product Sales', 'Consulting / Advisory', 'Training / Courses', 'Support / Maintenance', 'Design Services', 'Cloud / Hosting', 'Others'],
       selectedOptions: [], othersText: ''
     },
-    {
-      question: 'Who are your target customers?',
-      options: ['Small Businesses', 'Large Enterprises', 'Individual Consumers', 'Students', 'Startups', 'Government / NGO', 'Freelancers', 'Healthcare Professionals', 'Others'],
-      selectedOptions: [], othersText: ''
-    },
+    // {
+    //   question: 'Who are your target customers?',
+    //   options: ['Small Businesses', 'Large Enterprises', 'Individual Consumers', 'Students', 'Startups', 'Government / NGO', 'Freelancers', 'Healthcare Professionals', 'Others'],
+    //   selectedOptions: [], othersText: ''
+    // },
     // {
     //   question: 'What is your pricing model?',
     //   options: ['Fixed Project Price', 'Monthly Subscription', 'Hourly Rate', 'Freemium (Free + Paid)', 'Commission Based', 'Pay Per Use', 'Custom Quotation', 'Others'],
@@ -113,22 +142,74 @@ export class DashboardComponent implements OnInit {
     // }
   ];
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef) { }
+  questions: TrainingQuestion[] = this.originalQuestions.map(q => ({
+    ...q, selectedOptions: [], othersText: ''
+  }));
+
+  constructor(
+    private router: Router,
+    private cdr: ChangeDetectorRef,
+    private langService: LanguageService
+  ) { }
 
   get currentQuestion(): TrainingQuestion {
     return this.questions[this.currentQuestionIndex];
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     if (typeof window !== 'undefined') {
       const userData = localStorage.getItem('user');
       if (userData) {
         this.user = JSON.parse(userData);
-        console.log('USER DATA:', this.user);
         this.loadTrainingData();
+
+        // ✅ Get lang directly from user object
+        const lang = this.user.lang || 'en';
+        console.log('Current lang:', lang);
+
+        if (lang !== 'en') {
+          this.translatePage(lang);
+        }
       }
-    } else {
-      console.log('Running on server, skipping localStorage');
+    }
+  }
+
+  async translatePage(lang: string) {
+    try {
+      this.isTranslating = true;
+      this.cdr.detectChanges();
+
+      // ✅ Translate UI object
+      const uiKeys = Object.keys(this.ui);
+      const uiValues = Object.values(this.ui) as string[];
+      const translatedUi = await this.langService.translate(uiValues, lang);
+      uiKeys.forEach((key, i) => this.ui[key] = translatedUi[i]);
+
+      // ✅ Translate questions + options
+      const qTexts = this.originalQuestions.map(q => q.question);
+      const oTexts = this.originalQuestions.flatMap(q => q.options);
+      const allTranslated = await this.langService.translate([...qTexts, ...oTexts], lang);
+
+      const qCount = qTexts.length;
+      this.questions = this.originalQuestions.map((q, qi) => {
+        let optOffset = qCount;
+        for (let j = 0; j < qi; j++) optOffset += this.originalQuestions[j].options.length;
+        return {
+          ...q,
+          question: allTranslated[qi],
+          options: q.options.map((_, oi) => allTranslated[optOffset + oi]),
+          selectedOptions: [],
+          othersText: ''
+        };
+      });
+
+      this.isTranslating = false;
+      this.cdr.detectChanges();
+
+    } catch (err) {
+      console.error('Translation error:', err);
+      this.isTranslating = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -140,12 +221,8 @@ export class DashboardComponent implements OnInit {
           this.isTrained = true;
         }
       })
-      .catch(err => {
-        console.error('Error loading training data', err);
-      });
+      .catch(err => console.error('Error loading training data', err));
   }
-
-  // ── Questionnaire helpers ──────────────────────────
 
   startTraining() {
     if (this.isTrained) {
@@ -170,16 +247,24 @@ export class DashboardComponent implements OnInit {
       sel.push(opt);
     } else {
       sel.splice(idx, 1);
-      if (opt === 'Others') {
+      if (opt === this.questions[this.currentQuestionIndex].options[
+        this.questions[this.currentQuestionIndex].options.length - 1
+      ]) {
         this.currentQuestion.othersText = '';
       }
     }
   }
 
+  isOthersSelected(): boolean {
+    const q = this.currentQuestion;
+    const lastOption = q.options[q.options.length - 1];
+    return q.selectedOptions.includes(lastOption);
+  }
+
   hasAnswer(): boolean {
     const q = this.currentQuestion;
     if (q.selectedOptions.length === 0) return false;
-    if (q.selectedOptions.includes('Others') && !q.othersText.trim()) return false;
+    if (this.isOthersSelected() && !q.othersText.trim()) return false;
     return true;
   }
 
@@ -203,14 +288,28 @@ export class DashboardComponent implements OnInit {
 
   buildTrainingData() {
     const parts: string[] = [];
-    this.questions.forEach(q => {
+    this.questions.forEach((q, qi) => {
       if (q.selectedOptions.length === 0) return;
-      let answers = q.selectedOptions.filter(o => o !== 'Others');
-      if (q.selectedOptions.includes('Others') && q.othersText.trim()) {
+
+      // ✅ Use translated question if available, else original
+      const displayQuestion = q.question; // already translated
+
+      let answers = q.selectedOptions.map((sel) => {
+        const selIdx = q.options.indexOf(sel);
+        // ✅ Use translated option directly
+        return sel;
+      }).filter(a => {
+        // ✅ Filter out "Others" in any language (last option)
+        const lastOpt = q.options[q.options.length - 1];
+        return a !== lastOpt;
+      });
+
+      if (this.isOthersSelected() && q.othersText.trim()) {
         answers.push(q.othersText.trim());
       }
+
       if (answers.length > 0) {
-        parts.push(`${q.question}\nAnswer: ${answers.join(', ')}`);
+        parts.push(`${displayQuestion}\nAnswer: ${answers.join(', ')}`);
       }
     });
     this.trainingText = parts.join('\n\n');
@@ -222,38 +321,27 @@ export class DashboardComponent implements OnInit {
     this.currentQuestionIndex = 0;
   }
 
-  // ── Existing methods ──────────────────────────────
-
   trainAI() {
     if (!this.trainingText || this.trainingText.trim() === '') {
       alert('Please enter training data');
       return;
     }
-
     axios.post('http://localhost:3000/api/ai/train', {
       userId: this.user.id,
       name: this.user.name,
       email: this.user.email,
       mobile: this.user.mobile,
       trainingData: this.trainingText
-    })
-      .then(() => {
-        this.isTrained = true;
-        this.isEditing = false;
-        Swal.fire({
-          icon: 'success',
-          title: 'AI Trained Successfully!',
-          confirmButtonColor: '#DD1977'
-        }).then(() => {
-          window.location.reload();
-        });
-      })
-      .catch(() => {
-        alert('❌ Training failed');
-      });
+    }).then(() => {
+      this.isTrained = true;
+      this.isEditing = false;
+      Swal.fire({
+        icon: 'success',
+        title: 'AI Trained Successfully!',
+        confirmButtonColor: '#DD1977'
+      }).then(() => window.location.reload());
+    }).catch(() => alert('❌ Training failed'));
   }
-
-  // ── Voice ─────────────────────────────────────────
 
   startListening() {
     if (this.isListening) {
@@ -275,80 +363,78 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    try {
-      this.recognition = new SpeechRecognition();
-      this.recognition.lang = 'en-IN';
-      this.recognition.continuous = false;
-      this.recognition.interimResults = false;
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then((stream) => {
+        stream.getTracks().forEach(track => track.stop());
+        try {
+          this.recognition = new SpeechRecognition();
+          this.recognition.lang = 'en-IN';
+          this.recognition.continuous = false;
+          this.recognition.interimResults = false;
 
-      this.recognition.onstart = () => {
-        this.isListening = true;
-        this.cdr.detectChanges(); // ✅ Force button to update immediately
-      };
+          this.recognition.onstart = () => {
+            this.isListening = true;
+            this.cdr.detectChanges();
+          };
 
-      this.recognition.onresult = (event: any) => {
-        const transcript = event.results[event.results.length - 1][0].transcript;
-        this.trainingText = this.trainingText
-          ? this.trainingText + ' ' + transcript
-          : transcript;
-        this.cdr.detectChanges(); // ✅ Force textarea update
+          this.recognition.onresult = (event: any) => {
+            const transcript = event.results[event.results.length - 1][0].transcript;
+            this.trainingText = this.trainingText
+              ? this.trainingText + ' ' + transcript
+              : transcript;
+            this.cdr.detectChanges();
+            if (this.isListening) {
+              try { this.recognition.start(); } catch (e) { }
+            }
+          };
 
-        // Auto restart to keep listening
-        if (this.isListening) {
-          try {
-            this.recognition.start();
-          } catch (e) { }
-        }
-      };
-
-      this.recognition.onerror = (event: any) => {
-        this.isListening = false;
-        this.cdr.detectChanges(); // ✅ Force button back to Speak
-
-        if (event.error === 'not-allowed') {
-          Swal.fire({
-            icon: 'warning',
-            title: 'Microphone Blocked',
-            text: 'Please allow microphone access and try again.',
-            confirmButtonColor: '#DD1977'
-          });
-        } else if (event.error === 'audio-capture') {
-          Swal.fire({
-            icon: 'error',
-            title: 'No Microphone Found',
-            text: 'Please connect a microphone and try again.',
-            confirmButtonColor: '#DD1977'
-          });
-        }
-      };
-
-      this.recognition.onend = () => {
-        if (this.isListening) {
-          // Still listening → restart
-          try {
-            this.recognition.start();
-          } catch (e) {
+          this.recognition.onerror = (event: any) => {
             this.isListening = false;
             this.cdr.detectChanges();
-          }
-        } else {
-          // Stopped by user → update button
+            console.error('Speech error:', event.error);
+          };
+
+          this.recognition.onend = () => {
+            if (this.isListening) {
+              try {
+                this.recognition.start();
+              } catch (e) {
+                this.isListening = false;
+                this.cdr.detectChanges();
+              }
+            } else {
+              this.cdr.detectChanges();
+            }
+          };
+
+          this.recognition.start();
+
+        } catch (err) {
+          console.error('Speech init error:', err);
+          this.isListening = false;
           this.cdr.detectChanges();
         }
-      };
-
-      this.recognition.start();
-
-    } catch (err) {
-      console.error('Speech init error:', err);
-      this.isListening = false;
-      this.cdr.detectChanges();
-    }
+      })
+      .catch(() => {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Microphone Permission Denied',
+          html: `
+            <ol style="text-align:left; padding-left: 20px;">
+              <li>Click the 🔒 icon in the address bar</li>
+              <li>Click <b>"Site settings"</b></li>
+              <li>Set <b>Microphone</b> to <b>Allow</b></li>
+              <li>Refresh the page and try again</li>
+            </ol>
+          `,
+          confirmButtonColor: '#DD1977'
+        });
+      });
   }
 
   stopListening() {
-    this.isListening = false;       // ✅ Set false FIRST so onend doesn't restart
-    this.cdr.detectChanges();       // ✅ Button updates to 🎤 Speak immediately
+    this.isListening = false;
+    this.cdr.detectChanges();
     if (this.recognition) {
       this.recognition.stop();
       this.recognition = null;
@@ -364,4 +450,5 @@ export class DashboardComponent implements OnInit {
   }
 
   Chat() { this.router.navigate(['/chat']); }
+  Settings() { this.router.navigate(['/settings']); }
 }
