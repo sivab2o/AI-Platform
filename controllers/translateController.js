@@ -1,7 +1,5 @@
 const axios = require('axios');
 
-console.log('Google Key loaded:', process.env.GOOGLE_TRANSLATE_KEY?.slice(0, 10));
-
 const chunkArray = (arr, size) => {
   const chunks = [];
   for (let i = 0; i < arr.length; i += size) {
