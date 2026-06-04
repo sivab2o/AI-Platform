@@ -1,8 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewChecked, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import axios from 'axios';
-import Swal from 'sweetalert2';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -12,81 +11,104 @@ import { CommonModule } from '@angular/common';
   templateUrl: './chat.component.html',
   styleUrls: ['./chat.component.css']
 })
-export class ChatComponent implements OnInit {
+export class ChatComponent implements OnInit, AfterViewChecked {
+
+  @ViewChild('chatMessages') chatMessages!: ElementRef;
 
   user: any;
   userMessage: string = '';
   messages: any[] = [];
-  isTrained: boolean = false;
+  isTyping: boolean = false;
+  isLoading: boolean = false;
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private cdr: ChangeDetectorRef) { }
 
   ngOnInit() {
     if (typeof window !== 'undefined') {
       const userData = localStorage.getItem('user');
-
       if (userData) {
         this.user = JSON.parse(userData);
-        this.checkTraining();
+        this.loadConversations();
       }
     }
   }
 
-  // ✅ CHECK IF AI TRAINED
-  checkTraining() {
-    axios.get(`http://localhost:3000/api/ai/train/${this.user.id}`)
+  ngAfterViewChecked() {
+    this.scrollToBottom();
+  }
+
+  scrollToBottom() {
+    try {
+      if (this.chatMessages) {
+        this.chatMessages.nativeElement.scrollTop =
+          this.chatMessages.nativeElement.scrollHeight;
+      }
+    } catch (e) { }
+  }
+
+  formatTime(dateStr: string): string {
+    const date = dateStr ? new Date(dateStr) : new Date();
+    return date.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  }
+
+  loadConversations() {
+    this.isLoading = true;
+
+    const userId = this.user?.user_id;
+
+    axios.get(`http://localhost:3000/api/ai/conversations/${userId}`)
       .then(res => {
-        if (res.data && res.data.training_data) {
-          this.isTrained = true;
-        } else {
-          this.showNotTrained();
+        const data = Array.isArray(res.data) ? res.data : [];
+
+        if (data.length > 0) {
+          this.messages = data.flatMap((c: any) => ([
+            { sender: 'user', text: c.message, time: this.formatTime(c.created_at) },
+            { sender: 'bot', text: c.reply, time: this.formatTime(c.created_at) }
+          ]));
         }
+
+        this.isLoading = false;
+        this.cdr.detectChanges();
       })
       .catch(err => {
         console.error(err);
+        this.isLoading = false;
+        this.cdr.detectChanges();
       });
   }
 
-  // ❌ IF NOT TRAINED
-  showNotTrained() {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Train your AI first!',
-      text: 'Go to dashboard and train your AI employee.',
-      confirmButtonText: 'Go to Dashboard'
-    }).then(() => {
-      this.router.navigate(['/dashboard']);
-    });
-  }
+  async sendMessage() {
+    if (!this.userMessage.trim() || this.isTyping) return;
 
-  // 💬 SEND MESSAGE
-  sendMessage() {
-
-    if (!this.userMessage.trim()) return;
-
-    // Push user message
-    this.messages.push({
-      sender: 'user',
-      text: this.userMessage
-    });
-
-    const msg = this.userMessage;
+    const msg = this.userMessage.trim();
     this.userMessage = '';
 
-    // 🔥 CALL YOUR AI BACKEND HERE
-    axios.post('http://localhost:3000/api/chat', {
-      userId: this.user.id,
-      message: msg
-    })
-      .then(res => {
-        this.messages.push({
-          sender: 'bot',
-          text: res.data.reply
-        });
-      })
-      .catch(err => {
-        console.error(err);
+    this.messages.push({ sender: 'user', text: msg, time: this.formatTime('') });
+    this.isTyping = true;
+    this.cdr.detectChanges();
+
+    try {
+      const res = await axios.post('http://localhost:3000/api/ai/chat', {
+        userId: this.user.user_id,
+        message: msg
       });
+
+      this.messages.push({ sender: 'bot', text: res.data.reply, time: this.formatTime('') });
+
+    } catch (err) {
+      this.messages.push({
+        sender: 'bot',
+        text: '❌ Sorry, something went wrong. Please try again.',
+        time: this.formatTime('')
+      });
+    }
+
+    this.isTyping = false;
+    this.cdr.detectChanges();
   }
 
   logout() {
@@ -94,7 +116,6 @@ export class ChatComponent implements OnInit {
     this.router.navigate(['/login']);
   }
 
-  Dashboard() {
-    this.router.navigate(['/dashboard']);
-  }
+  Dashboard() { this.router.navigate(['/dashboard']); }
+  Settings() { this.router.navigate(['/settings']); }
 }

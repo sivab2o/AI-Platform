@@ -1,0 +1,126 @@
+<div class="dashboard">
+    <div class="sidebar">
+        <h2>AI Employee</h2>
+        <ul>
+            <li (click)="Dashboard()">🏠 Dashboard</li>
+            <li class="active">📝 Basic Questions</li>
+            <li (click)="Clients()">👥 Clients</li>
+            <li (click)="Settings()">⚙ Settings</li>
+        </ul>
+        <button class="logout-btn" (click)="logout()">Logout</button>
+    </div>
+
+    <div class="main">
+        <div class="topbar">
+            <h3>📝 Basic Training Questions</h3>
+            <div class="topbar-right">
+                <button class="btn-add" (click)="openAddForm()">+ Add Question</button>
+                <div class="profile">👤 {{ user?.name }}</div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div class="loading-box" *ngIf="isLoading">
+            <div class="spinner"></div>
+            <p>Loading questions...</p>
+        </div>
+
+        <!-- Empty -->
+        <div class="empty-box" *ngIf="!isLoading && questions.length === 0">
+            <p>📝 No questions yet. Click "+ Add Question" to start!</p>
+        </div>
+
+        <!-- Questions List -->
+        <div class="questions-list" *ngIf="!isLoading && questions.length > 0">
+            <div class="question-card" *ngFor="let q of questions; let i = index">
+                <div class="q-card-header">
+                    <div class="q-number">{{ i + 1 }}</div>
+                    <div class="q-info">
+                        <p class="q-text">{{ q.question }}</p>
+                        <div class="q-meta">
+                            <span class="q-type" [class.fill-type]="q.question_type === 'fill'">
+                                {{ q.question_type === 'multiple' ? '☑ Multiple Choice' : '✏ Fill Type' }}
+                            </span>
+                            <span class="q-others" *ngIf="q.has_others">+ Others field</span>
+                        </div>
+                        <!-- Options preview -->
+                        <div class="q-options-preview" *ngIf="q.question_type === 'multiple' && q.options?.length > 0">
+                            <span class="opt-chip" *ngFor="let opt of q.options">{{ opt }}</span>
+                        </div>
+                    </div>
+                    <div class="q-actions">
+                        <button class="edit-btn" (click)="openEditForm(q)">✏ Edit</button>
+                        <button class="delete-btn" (click)="deleteQuestion(q.id)">🗑 Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ✅ Add/Edit Form Modal -->
+        <div class="modal-overlay" *ngIf="showForm">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <h3>{{ isEditing ? '✏ Edit Question' : '+ Add Question' }}</h3>
+                    <button class="close-modal" (click)="closeForm()">✕</button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- Question Text -->
+                    <div class="form-group">
+                        <label>Question *</label>
+                        <input type="text" [(ngModel)]="formQuestion" placeholder="Enter your question..." />
+                    </div>
+
+                    <!-- Question Type -->
+                    <div class="form-group">
+                        <label>Question Type *</label>
+                        <div class="type-toggle">
+                            <button [class.active]="formType === 'multiple'" (click)="formType = 'multiple'">
+                                ☑ Multiple Choice
+                            </button>
+                            <button [class.active]="formType === 'fill'" (click)="formType = 'fill'">
+                                ✏ Fill Type
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Options (only for multiple choice) -->
+                    <div class="form-group" *ngIf="formType === 'multiple'">
+                        <label>Options *</label>
+                        <div class="options-list">
+                            <div class="option-row" *ngFor="let opt of formOptions; let i = index; trackBy: trackByIndex">
+                                <input type="text" [(ngModel)]="formOptions[i]"
+                                    placeholder="Option {{ i + 1 }}" />
+                                <button class="remove-opt" (click)="removeOption(i)"
+                                    [disabled]="formOptions.length <= 2">✕</button>
+                            </div>
+                        </div>
+                        <button class="btn-add-option" (click)="addOption()">+ Add Option</button>
+                    </div>
+
+                    <!-- Has Others -->
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" [(ngModel)]="formHasOthers" />
+                            Include "Others" field (allows custom input)
+                        </label>
+                    </div>
+
+                    <!-- Sort Order -->
+                    <div class="form-group">
+                        <label>Sort Order</label>
+                        <input type="number" [(ngModel)]="formSortOrder" placeholder="0" />
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn-cancel" (click)="closeForm()">Cancel</button>
+                    <button class="btn-save" (click)="saveQuestion()">
+                        {{ isEditing ? '💾 Update' : '💾 Save' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

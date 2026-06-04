@@ -5,13 +5,11 @@
         <h2>AI Employee</h2>
         <ul>
             <li (click)="Dashboard()">🏠 Dashboard</li>
-            <li (click)="Chat()">💬 Chat</li>
-            <li>📊 Leads</li>
-            <li>📁 Documents</li>
-            <li>🎙 Voice</li>
-            <li class="active">⚙ Settings</li>
+            <li (click)="Clients()">👥 Clients</li>
+            <!-- <li (click)="Chat()">💬 Chat</li> -->
+            <li class="active" (click)="Settings()">⚙ Settings</li>
         </ul>
-        <button class="logout-btn" (click)="logout()">Logout</button>
+        <button class="logout-btn" (click)="logout()">{{ ui.logout }}</button>
     </div>
 
     <!-- Main Content -->
@@ -19,7 +17,7 @@
 
         <!-- Topbar -->
         <div class="topbar">
-            <h3>Settings ⚙️</h3>
+            <h3>{{ ui.title }} ⚙️</h3>
             <div class="profile">👤 {{ user?.name }}</div>
         </div>
 
@@ -27,33 +25,33 @@
         <div class="translate-overlay" *ngIf="isSaving">
             <div class="translate-box">
                 <div class="spinner"></div>
-                <p>🌐 Translating & Saving... please wait</p>
+                <p>🌐 {{ ui.translatingSaving }}</p>
             </div>
         </div>
 
         <!-- Language Settings -->
         <div class="settings-box">
-            <h4>🌐 Language</h4>
-            <p class="settings-sub">Choose your preferred language for the app</p>
+            <h4>🌐 {{ ui.language }}</h4>
+            <p class="settings-sub">{{ ui.languageSub }}</p>
 
             <div class="lang-options">
                 <div class="lang-card" [class.selected-lang]="selectedLang === 'en'"
                     (click)="selectLang('en')">
                     <span class="lang-flag">🇬🇧</span>
-                    <span class="lang-name">English</span>
+                    <span class="lang-name">{{ ui.english }}</span>
                     <span class="lang-check" *ngIf="selectedLang === 'en'">✅</span>
                 </div>
 
                 <div class="lang-card" [class.selected-lang]="selectedLang === 'ta'"
                     (click)="selectLang('ta')">
                     <span class="lang-flag">🇮🇳</span>
-                    <span class="lang-name">தமிழ் (Tamil)</span>
+                    <span class="lang-name">{{ ui.tamil }}</span>
                     <span class="lang-check" *ngIf="selectedLang === 'ta'">✅</span>
                 </div>
             </div>
 
             <button class="btn-save" (click)="saveSettings()" [disabled]="isSaving">
-                {{ isSaving ? '⏳ Translating...' : '💾 Save Settings' }}
+                {{ isSaving ? '⏳ ' + ui.translating : '💾 ' + ui.saveSettings }}
             </button>
         </div>
 

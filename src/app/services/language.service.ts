@@ -88,12 +88,10 @@ export class LanguageService {
     return localStorage.getItem('lang') || 'en';
   }
 
-  // ✅ Simple index-based key — no hashing issues
   private getKey(lang: string, index: number): string {
     return `tr_${lang}_${index}`;
   }
 
-  // ✅ Called ONLY from settings
   async translateAndCache(lang: string): Promise<void> {
     const res = await axios.post('http://localhost:3000/api/ai/translate', {
       texts: this.allTexts,
@@ -102,7 +100,6 @@ export class LanguageService {
 
     const translated: string[] = res.data.translations;
 
-    // ✅ Save using simple index key
     this.allTexts.forEach((text, i) => {
       localStorage.setItem(this.getKey(lang, i), translated[i]);
     });
@@ -110,7 +107,6 @@ export class LanguageService {
     console.log('✅ All translations cached');
   }
 
-  // ✅ Get single text by finding its index
   get(text: string, lang: string): string {
     if (lang === 'en') return text;
     const index = this.allTexts.indexOf(text);
@@ -118,9 +114,38 @@ export class LanguageService {
     return localStorage.getItem(this.getKey(lang, index)) || text;
   }
 
-  // ✅ Used by pages — reads from localStorage only
-  translate(texts: string[], lang: string): string[] {
+  // ✅ Updated — calls API if not cached, saves to localStorage
+  async translate(texts: string[], lang: string): Promise<string[]> {
     if (lang === 'en') return texts;
-    return texts.map(text => this.get(text, lang));
+
+    // ✅ Check cache first using key-value map
+    const cacheKey = `tr_map_${lang}`;
+    const cached = localStorage.getItem(cacheKey);
+
+    if (cached) {
+      const cachedMap = JSON.parse(cached);
+      const result = texts.map(t => cachedMap[t] || t);
+      console.log('✅ Loaded from cache:', lang);
+      return result;
+    }
+
+    // ✅ Not cached — call API
+    console.log('🌐 Calling API for:', lang);
+    const res = await axios.post('http://localhost:3000/api/ai/translate', {
+      texts,
+      targetLang: lang
+    });
+
+    const translated: string[] = res.data.translations;
+
+    // ✅ Save as key-value map
+    const cacheMap: any = {};
+    texts.forEach((t, i) => {
+      cacheMap[t] = translated[i];
+    });
+    localStorage.setItem(cacheKey, JSON.stringify(cacheMap));
+
+    console.log('✅ Translated and cached:', lang);
+    return translated;
   }
 }

@@ -3,16 +3,11 @@
     <!-- Sidebar -->
     <div class="sidebar">
         <h2>AI Employee</h2>
-
         <ul>
             <li (click)="Dashboard()">🏠 Dashboard</li>
-            <li class="active">💬 Chat</li>
-            <li>📊 Leads</li>
-            <li>📁 Documents</li>
-            <li>🎙 Voice</li>
-            <li>⚙ Settings</li>
+            <!-- <li class="active">💬 Chat</li> -->
+            <li (click)="Settings()">⚙ Settings</li>
         </ul>
-
         <button class="logout-btn" (click)="logout()">Logout</button>
     </div>
 
@@ -21,51 +16,79 @@
 
         <!-- Topbar -->
         <div class="topbar">
-            <h3>Welcome back 👋</h3>
+            <h3>AI Chat 💬</h3>
             <div class="profile">👤 {{ user?.name }}</div>
         </div>
 
-        <!-- Cards (KEEP SAME) -->
-        <div class="cards">
-            <div class="card">
-                <h4>Total Conversations</h4>
-                <p>120</p>
-            </div>
+        <!-- Chat Container -->
+        <div class="chat-container">
 
-            <div class="card">
-                <h4>Leads Generated</h4>
-                <p>45</p>
-            </div>
-
-            <div class="card">
-                <h4>Hot Leads</h4>
-                <p class="hot">12</p>
-            </div>
-
-            <div class="card">
-                <h4>AI Accuracy</h4>
-                <p>92%</p>
-            </div>
-        </div>
-
-        <!-- 🔥 CHAT SECTION (REPLACED) -->
-        <div class="chat-box">
-
-            <!-- Messages -->
-            <div class="chat-messages">
-                <div *ngFor="let msg of messages"
-                     [ngClass]="msg.sender === 'user' ? 'user-msg' : 'bot-msg'">
-                    {{ msg.text }}
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <div class="chat-header-avatar">🤖</div>
+                <div class="chat-header-info">
+                    <h4>AI Employee</h4>
+                    <span class="online-dot">● Online</span>
                 </div>
             </div>
 
-            <!-- Input -->
-            <div class="chat-input">
-                <input type="text"
-                       [(ngModel)]="userMessage"
-                       placeholder="Ask your AI employee..." />
+            <!-- Messages -->
+            <div class="chat-messages" #chatMessages>
 
-                <button (click)="sendMessage()">Send</button>
+                <!-- Welcome message -->
+                <div class="bot-msg-wrapper" *ngIf="messages.length === 0 && !isLoading">
+                    <div class="avatar">🤖</div>
+                    <div class="bot-msg">
+                        Hello! 👋 I'm your AI Employee. How can I help you today?
+                    </div>
+                </div>
+
+                <!-- Loading spinner -->
+                <div class="loading-msgs" *ngIf="isLoading">
+                    <div class="spinner-small"></div>
+                    <p>Loading conversations...</p>
+                </div>
+
+                <ng-container *ngFor="let msg of messages">
+                    <!-- User message -->
+                    <div class="user-msg-wrapper" *ngIf="msg.sender === 'user'">
+                        <div class="user-msg">
+                            <p>{{ msg.text }}</p>
+                            <span class="msg-time">{{ msg.time }}</span>
+                        </div>
+                        <div class="avatar">👤</div>
+                    </div>
+
+                    <!-- Bot message -->
+                    <div class="bot-msg-wrapper" *ngIf="msg.sender === 'bot'">
+                        <div class="avatar">🤖</div>
+                        <div class="bot-msg">
+                            <p>{{ msg.text }}</p>
+                            <span class="msg-time">{{ msg.time }}</span>
+                        </div>
+                    </div>
+                </ng-container>
+
+                <!-- Typing indicator -->
+                <div class="bot-msg-wrapper" *ngIf="isTyping">
+                    <div class="avatar">🤖</div>
+                    <div class="bot-msg typing">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Input -->
+            <div class="chat-input-box">
+                <input type="text"
+                    [(ngModel)]="userMessage"
+                    (keyup.enter)="sendMessage()"
+                    placeholder="Type your message..."
+                    [disabled]="isTyping" />
+                <button (click)="sendMessage()" [disabled]="isTyping || !userMessage.trim()">
+                    ➤
+                </button>
             </div>
 
         </div>

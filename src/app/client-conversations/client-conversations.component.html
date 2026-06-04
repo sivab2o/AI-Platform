@@ -1,0 +1,72 @@
+<div class="dashboard">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>AI Employee</h2>
+        <ul>
+            <li (click)="Dashboard()">🏠 Dashboard</li>
+            <!-- <li (click)="Chat()">💬 Chat</li> -->
+            <li>📝 Basic Questions</li>
+            <li class="active" (click)="goBack()">👥 Clients</li>
+            <li (click)="Settings()">⚙ Settings</li>
+        </ul>
+        <button class="logout-btn" (click)="logout()">Logout</button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <button class="back-btn" (click)="goBack()">←</button>
+                <h3>💬 {{ clientName }}'s Conversation</h3>
+            </div>
+            <div class="profile">👤 {{ user?.name }}</div>
+        </div>
+
+        <!-- Loading -->
+        <div class="loading-box" *ngIf="isLoading">
+            <div class="spinner"></div>
+            <p>Loading conversations...</p>
+        </div>
+
+        <!-- Empty -->
+        <div class="empty-box" *ngIf="!isLoading && messages.length === 0">
+            <p>😕 No conversations found</p>
+        </div>
+
+        <!-- Chat View -->
+        <div class="chat-view" *ngIf="!isLoading && messages.length > 0">
+            <div class="chat-box" #chatBox>
+                <ng-container *ngFor="let msg of messages">
+
+                    <!-- Date separator -->
+                    <div class="date-separator">
+                        <span>{{ formatDate(msg.created_at) }}</span>
+                    </div>
+
+                    <!-- User message -->
+                    <div class="user-msg-wrapper">
+                        <div class="user-msg">
+                            <p>{{ msg.message }}</p>
+                            <span class="msg-time">{{ formatTime(msg.created_at) }}</span>
+                        </div>
+                        <div class="avatar user-avatar">{{ clientName.charAt(0).toUpperCase() }}</div>
+                    </div>
+
+                    <!-- Bot reply -->
+                    <div class="bot-msg-wrapper">
+                        <div class="avatar bot-avatar">🤖</div>
+                        <div class="bot-msg">
+                            <p>{{ msg.reply }}</p>
+                            <span class="msg-time">{{ formatTime(msg.created_at) }}</span>
+                        </div>
+                    </div>
+
+                </ng-container>
+            </div>
+        </div>
+
+    </div>
+</div>

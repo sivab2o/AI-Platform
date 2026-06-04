@@ -4,11 +4,13 @@
     <div class="sidebar">
         <h2>AI Employee</h2>
         <ul>
-            <li class="active">🏠 {{ ui.dashboard }}</li>
-            <li (click)="Chat()">💬 {{ ui.chat }}</li>
-            <li (click)="Settings()">⚙ {{ ui.settings }}</li>
+            <li class="active">🏠 Dashboard</li>
+            <li (click)="BasicQuestions()">📝 Basic Questions</li>
+            <li (click)="Clients()">👥 Clients</li>
+            <!-- <li (click)="Chat()">💬 Chat</li> -->
+            <li (click)="Settings()">⚙ Settings</li>
         </ul>
-        <button class="logout-btn" (click)="logout()">{{ ui.logout }}</button>
+        <button class="logout-btn" (click)="logout()">Logout</button>
     </div>
 
     <!-- Main Content -->
@@ -16,7 +18,7 @@
 
         <!-- Top Bar -->
         <div class="topbar">
-            <h3>{{ ui.welcome }}</h3>
+            <h3>Welcome back 👋</h3>
             <div class="profile">👤 {{ user?.name }}</div>
         </div>
 
@@ -29,41 +31,64 @@
         </div>
 
         <!-- Cards -->
-        <div class="cards">
-            <div class="card">
-                <h4>{{ ui.totalConversations }}</h4>
-                <p>120</p>
-            </div>
-            <div class="card">
-                <h4>{{ ui.leadsGenerated }}</h4>
-                <p>45</p>
-            </div>
-            <div class="card">
-                <h4>{{ ui.hotLeads }}</h4>
-                <p class="hot">12</p>
-            </div>
-            <div class="card">
-                <h4>{{ ui.aiAccuracy }}</h4>
-                <p>92%</p>
-            </div>
+        <!-- Cards -->
+<div class="cards">
+    <div class="card">
+        <h4>Total Conversations</h4>
+        <p>{{ totalConversations }}</p>
+    </div>
+    <div class="card">
+        <h4>Total Clients</h4>
+        <p>{{ totalClients }}</p>
+    </div>
+    <div class="card">
+        <h4>Hot Conversations</h4>
+        <p class="hot">{{ hotConversations }}</p>
+    </div>
+    <div class="card">
+        <h4>Cold Conversations</h4>
+        <p class="cold">{{ coldConversations }}</p>
+    </div>
+</div>
+
+        <!-- ✅ Show link after trained -->
+        <div class="your-link-banner" *ngIf="isTrained && !showQuestionnaire && !showTrainBox">
+            <span>🔗 Your shareable link:</span>
+            <a [href]="'http://localhost:4200/user/' + user?.user_id" target="_blank">
+                http://localhost:4200/user/{{ user?.user_id }}
+            </a>
+            <button class="copy-btn" (click)="copyLink()">📋 Copy</button>
         </div>
 
-        <!-- Train AI Button -->
+        <!-- Train AI Buttons -->
         <div class="train-trigger" *ngIf="!showQuestionnaire && !showTrainBox">
-            <button class="btn-start-train" (click)="startTraining()">
-                {{ isTrained ? ui.editTrainBtn : ui.trainBtn }}
+            <button class="btn-basic-train" (click)="startBasicTraining()">
+                🧠 {{ isTrained ? 'Edit Basic AI Employee' : 'Basic AI Employee' }}
+            </button>
+            <button class="btn-master-train" *ngIf="isTrained" (click)="startMasterTraining()">
+                ⚡ Edit Master AI Employee
             </button>
         </div>
 
         <!-- STEP 1: Questionnaire -->
         <div class="ai-setup" *ngIf="showQuestionnaire && !showTrainBox">
             <div class="q-header">
-                <h3>{{ ui.trainTitle }}</h3>
-                <p class="q-sub">{{ ui.trainSub }}</p>
+                <div class="q-header-top">
+                    <h3>🧠 Train Your AI Employee</h3>
+                    <select class="lang-select" [(ngModel)]="selectedLang" (change)="onLangChange()">
+                        <option value="en">🇬🇧 English</option>
+                        <option value="ta">🇮🇳 Tamil</option>
+                        <option value="hi">🇮🇳 Hindi</option>
+                        <option value="te">🇮🇳 Telugu</option>
+                        <option value="ml">🇮🇳 Malayalam</option>
+                        <option value="kn">🇮🇳 Kannada</option>
+                    </select>
+                </div>
+                <p class="q-sub">Choose the correct answers — you can select multiple options per question</p>
                 <div class="q-progress-bar">
                     <div class="q-progress-fill" [style.width.%]="progressPercent()"></div>
                 </div>
-                <span class="q-count">{{ ui.question }} {{ currentQuestionIndex + 1 }} {{ ui.of }} {{ questions.length }}</span>
+                <span class="q-count">Question {{ currentQuestionIndex + 1 }} of {{ questions.length }}</span>
             </div>
 
             <div class="q-card" *ngIf="currentQuestion">
@@ -75,57 +100,97 @@
                     </button>
                 </div>
                 <div *ngIf="isOthersSelected()" class="q-others-input">
-                    <input type="text" [(ngModel)]="currentQuestion.othersText"
-                        [placeholder]="ui.specifyPlaceholder" />
+                    <input type="text" [(ngModel)]="currentQuestion.othersText" placeholder="Please specify..." />
                 </div>
             </div>
 
             <div class="q-nav">
                 <button class="btn-prev" (click)="prevQuestion()" [disabled]="currentQuestionIndex === 0">
-                    {{ ui.previous }}
+                    ← Previous
                 </button>
                 <button class="btn-next" *ngIf="currentQuestionIndex < questions.length - 1"
                     (click)="nextQuestion()" [disabled]="!hasAnswer()">
-                    {{ ui.next }}
+                    Next →
                 </button>
                 <button class="btn-finish" *ngIf="currentQuestionIndex === questions.length - 1"
                     (click)="finishQuestionnaire()" [disabled]="!hasAnswer()">
-                    {{ ui.finish }}
+                    ✅ Finish & Review
                 </button>
             </div>
         </div>
 
-        <!-- STEP 2: Train AI Box -->
+        <!-- STEP 2: Master AI Box -->
         <div class="ai-setup" *ngIf="showTrainBox">
             <div class="train-header">
-                <h3>{{ ui.trainTitle }}</h3>
-                <button class="btn-redo" (click)="redoQuestionnaire()" *ngIf="!isTrained">
-                    {{ ui.redoBtn }}
-                </button>
+                <div>
+                    <h3>⚡ Master AI Employee</h3>
+                    <p class="master-sub">Add extra details, instructions or custom knowledge for your AI</p>
+                </div>
+                <div class="train-header-right">
+                    <button type="button" class="btn-redo" (click)="goBackToDashboard()">
+                        ← Back
+                    </button>
+                </div>
             </div>
 
-            <div class="voice-box">
-                <textarea [(ngModel)]="trainingText"
-                    [disabled]="isTrained && !isEditing"
-                    [placeholder]="ui.placeholder">
+            <!-- ✅ Link banner -->
+            <div class="link-banner">
+                <span>🔗 Your link:</span>
+                <a [href]="'http://localhost:4200/user/' + user?.user_id" target="_blank">
+                    http://localhost:4200/user/{{ user?.user_id }}
+                </a>
+                <button type="button" class="copy-btn" (click)="copyLink()">📋 Copy</button>
+            </div>
+
+            <!-- ✅ Voice + File toolbar -->
+            <div class="editor-toolbar">
+                <button type="button" class="tool-btn" (click)="startListening()"
+                    [class.active-tool]="isListening">
+                    {{ isListening ? '🛑 Stop' : '🎤 Voice' }}
+                </button>
+                <button type="button" class="tool-btn" (click)="triggerFileUpload()">
+                    📄 Upload File
+                </button>
+                <button type="button" class="tool-btn" (click)="clearMaster()">
+                    🗑️ Clear
+                </button>
+                <span class="mic-live" *ngIf="isListening">🔴 Listening...</span>
+            </div>
+
+            <!-- ✅ Hidden file input — outside CKEditor -->
+            <input type="file" #fileInput (change)="onFileUpload($event)"
+                accept=".txt,.doc,.docx" style="display:none" />
+
+            <!-- ✅ Uploaded files preview -->
+            <div class="uploaded-files" *ngIf="uploadedFiles.length > 0">
+                <div class="uploaded-file" *ngFor="let f of uploadedFiles; let i = index">
+                    <span>📎 {{ f.name }}</span>
+                    <button type="button" class="remove-file" (click)="removeFile(i)">✕</button>
+                </div>
+            </div>
+
+            <!-- ✅ Mic status -->
+            <p class="mic-status" *ngIf="isListening">
+                🔴 Listening... speak now, click Stop when done
+            </p>
+
+            <!-- ✅ CKEditor — only loads in browser -->
+            <div class="ck-editor-wrapper" *ngIf="isBrowser && Editor">
+                <ckeditor [editor]="Editor" [(ngModel)]="masterTrainingText" [config]="editorConfig">
+                </ckeditor>
+            </div>
+
+            <!-- ✅ Fallback textarea while CKEditor loads -->
+            <div class="textarea-wrapper" *ngIf="!Editor">
+                <textarea [(ngModel)]="masterTrainingText" placeholder="Loading editor...">
                 </textarea>
-                <button class="mic-btn" (click)="startListening()"
-                    [class.listening]="isListening"
-                    [disabled]="isTrained && !isEditing">
-                    {{ isListening ? ui.stopListening : ui.speak }}
-                </button>
-                <p class="mic-status" *ngIf="isListening">
-                    {{ ui.listeningMsg }}
-                </p>
             </div>
 
-            <button *ngIf="!isTrained || isEditing" (click)="trainAI()">
-                {{ isTrained ? ui.updateBtn : ui.saveBtn }}
+            <!-- ✅ Save Master AI button -->
+            <button type="button" class="btn-save-master" (click)="saveMasterAI()">
+                💾 Save Master AI
             </button>
-            <button *ngIf="isTrained && !isEditing" (click)="enableEdit()">
-                {{ ui.editBtn }}
-            </button>
-        </div>
 
+        </div>
     </div>
 </div>

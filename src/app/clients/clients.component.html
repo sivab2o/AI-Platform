@@ -1,0 +1,92 @@
+<div class="dashboard">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>AI Employee</h2>
+        <ul>
+            <li (click)="Dashboard()">🏠 Dashboard</li>
+            <li>📝 Basic Questions</li>
+            <!-- <li (click)="Chat()">💬 Chat</li> -->
+            <li class="active">👥 Clients</li>
+            <li (click)="Settings()">⚙ Settings</li>
+        </ul>
+        <button class="logout-btn" (click)="logout()">Logout</button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+
+        <!-- Topbar -->
+        <div class="topbar">
+            <h3>👥 Clients</h3>
+            <div class="profile">👤 {{ user?.name }}</div>
+        </div>
+
+        <!-- Search + Count -->
+        <div class="clients-toolbar">
+            <div class="search-box">
+                <input type="text" [(ngModel)]="searchText" (input)="onSearch()"
+                    placeholder="🔍 Search by name or mobile..." />
+            </div>
+            <div class="client-count">
+                Total: <strong>{{ filteredClients.length }}</strong> clients
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div class="loading-box" *ngIf="isLoading">
+            <div class="spinner"></div>
+            <p>Loading clients...</p>
+        </div>
+
+        <!-- Empty -->
+        <div class="empty-box" *ngIf="!isLoading && filteredClients.length === 0">
+            <p>😕 No clients found</p>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrapper" *ngIf="!isLoading && filteredClients.length > 0">
+            <table class="clients-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Mobile</th>
+                        <!-- <th>Messages Count</th> -->
+                        <!-- <th>Last Message</th> -->
+                        <th>Last Active</th>
+                        <!-- <th>Joined</th> -->
+                        <th>Conversation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let client of filteredClients; let i = index">
+                        <td>{{ i + 1 }}</td>
+                        <td>
+                            <div class="client-name">
+                                <div class="client-avatar">{{ client.name?.charAt(0)?.toUpperCase() }}</div>
+                                {{ client.name }}
+                            </div>
+                        </td>
+                        <td>{{ client.mobile }}</td>
+                        <!-- <td>
+                            <span class="msg-badge">{{ client.total_messages }}</span>
+                        </td> -->
+                        <!-- <td class="last-msg">{{ client.last_message || '-' }}</td> -->
+                        <td>{{ formatDate(client.last_active) }}<br>
+                            <small>{{ formatTime(client.last_active) }}</small>
+                        </td>
+                        <!-- <td>{{ formatDate(client.created_at) }}</td> -->
+                    
+                        <td>
+                            <button class="view-btn" (click)="viewConversation(client.id)">
+                                💬 View Conversations
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>

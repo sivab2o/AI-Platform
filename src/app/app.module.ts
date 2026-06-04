@@ -7,6 +7,7 @@ import { SignupComponent } from './signup/signup.component';  // Import SignupCo
 import { AppRoutingModule } from './app-routing.module';  // Import app-routing.module.ts
 import { FormsModule } from '@angular/forms';  // Import FormsModule for ngModel
 
+
 @NgModule({
   declarations: [
     AppComponent,  // Declare the AppComponent here

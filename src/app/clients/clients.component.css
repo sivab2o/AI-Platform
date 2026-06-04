@@ -1,0 +1,233 @@
+.dashboard {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 250px;
+    background: #1e2673;
+    color: white;
+    padding: 20px;
+}
+
+.sidebar h2 {
+    margin-bottom: 30px;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar ul li {
+    padding: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.sidebar ul li:hover,
+.sidebar .active {
+    background: #DD1977;
+}
+
+.logout-btn {
+    margin-top: 20px;
+    width: 100%;
+    padding: 10px;
+    background: #DD1977;
+    border: none;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.main {
+    flex: 1;
+    padding: 20px;
+    background: #f5f6fa;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.profile {
+    background: #DD1977;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+
+/* ✅ Toolbar */
+.clients-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.search-box input {
+    padding: 10px 16px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    width: 300px;
+    font-family: inherit;
+}
+
+.search-box input:focus {
+    border-color: #DD1977;
+}
+
+.client-count {
+    font-size: 14px;
+    color: #555;
+}
+
+/* ✅ Loading */
+.loading-box {
+    text-align: center;
+    padding: 40px;
+    color: #888;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #eee;
+    border-top: 4px solid #DD1977;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* ✅ Empty */
+.empty-box {
+    text-align: center;
+    padding: 60px;
+    color: #aaa;
+    font-size: 16px;
+    background: white;
+    border-radius: 10px;
+}
+
+/* ✅ Table */
+.table-wrapper {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    overflow-x: auto;
+}
+
+.clients-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.clients-table thead tr {
+    background: linear-gradient(135deg, #1e2673, #DD1977);
+    color: white;
+}
+
+.clients-table th {
+    padding: 14px 16px;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.clients-table tbody tr {
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.15s;
+}
+
+.clients-table tbody tr:hover {
+    background: #fef6f9;
+}
+
+.clients-table td {
+    padding: 12px 16px;
+    color: #444;
+    vertical-align: middle;
+}
+
+/* ✅ Client name with avatar */
+.client-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+}
+
+.client-avatar {
+    width: 34px;
+    height: 34px;
+    background: linear-gradient(135deg, #1e2673, #DD1977);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+/* ✅ Message badge */
+.msg-badge {
+    background: #f0f4ff;
+    color: #1e2673;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.last-msg {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #888;
+    font-size: 13px;
+}
+
+small {
+    color: #aaa;
+    font-size: 11px;
+}
+
+.view-btn {
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #1e2673, #DD1977);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: opacity 0.2s;
+}
+
+.view-btn:hover {
+    opacity: 0.85;
+}

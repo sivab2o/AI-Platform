@@ -1,0 +1,86 @@
+<div class="public-chat-wrapper">
+
+    <div class="chat-wrapper">
+
+        <div class="guest-form" *ngIf="collectingInfo && step === 'form'">
+            <div class="guest-form-body">
+                <p class="form-title">Welcome! Enter your details to start chatting</p>
+                <div class="form-group">
+                    <label>Full Name *</label>
+                    <input type="text" [(ngModel)]="guestName" placeholder="Enter your name" />
+                </div>
+                <div class="form-group">
+                    <label>Mobile Number *</label>
+                    <input type="tel" [(ngModel)]="guestMobile" placeholder="Enter 10-digit mobile number" />
+                </div>
+                <button class="btn-start-chat" (click)="submitForm()">
+                    Start Chatting 💬
+                </button>
+            </div>
+        </div>
+
+        <!-- ✅ Step 2: Chat — shown after form -->
+        <ng-container *ngIf="!collectingInfo">
+            <div class="chat-messages" #chatMessages>
+
+                <ng-container *ngFor="let msg of messages">
+                    <div class="user-msg-wrapper" *ngIf="msg.sender === 'user'">
+                        <div class="user-msg">
+                            <p>{{ msg.text }}</p>
+                            <span class="msg-time">{{ msg.time }}</span>
+                        </div>
+                        <div class="avatar">👤</div>
+                    </div>
+                    <div class="bot-msg-wrapper" *ngIf="msg.sender === 'bot'">
+                        <div class="avatar">🤖</div>
+                        <div class="bot-msg">
+                            <p>{{ msg.text }}</p>
+                            <span class="msg-time">{{ msg.time }}</span>
+                        </div>
+                    </div>
+                </ng-container>
+
+                <!-- ✅ Quick replies -->
+                <div class="quick-replies-chat" *ngIf="showQuickReplies && quickReplies.length > 0">
+                    <p class="quick-label">💡 You can also ask:</p>
+                    <div class="quick-buttons">
+                        <button class="quick-btn" *ngFor="let q of quickReplies" (click)="sendQuickReply(q)">
+                            {{ q }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Typing indicator -->
+                <div class="bot-msg-wrapper" *ngIf="isTyping">
+                    <div class="avatar">🤖</div>
+                    <div class="bot-msg typing">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="chat-input-box">
+                <input type="text" [(ngModel)]="userMessage" (keyup.enter)="sendMessage()"
+                    placeholder="{{ isListening ? 'Listening...' : 'Type or speak your message...' }}"
+                    [disabled]="isTyping" />
+
+                <!-- ✅ Stop speaking button -->
+                <button class="stop-speak-btn" *ngIf="isSpeaking" (click)="stopSpeaking()" title="Stop speaking">
+                    🔊
+                </button>
+
+                <!-- ✅ Voice button — left of send -->
+                <button class="voice-input-btn" (click)="startVoiceInput()" [class.listening]="isListening"
+                    [disabled]="isTyping" title="{{ isListening ? 'Stop listening' : 'Speak' }}">
+                    {{ isListening ? '🛑' : '🎤' }}
+                </button>
+
+                <!-- ✅ Send button -->
+                <button (click)="sendMessage()" [disabled]="isTyping || !userMessage.trim()">➤</button>
+            </div>
+        </ng-container>
+
+    </div>
+
+</div>
