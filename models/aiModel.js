@@ -98,24 +98,31 @@ const AIModel = {
     },
 
     getClients: (userId, callback) => {
-        const sql = `
-        SELECT
+        const query = `
+        SELECT 
             g.id,
             g.name,
             g.mobile,
-            g.created_at,
-            COUNT(gc.id) AS total_messages,
-            MAX(gc.created_at) AS last_active,
-            (SELECT gc2.message FROM guest_conversations gc2
-             WHERE gc2.guest_id = g.id
-             ORDER BY gc2.created_at DESC LIMIT 1) AS last_message
+            MAX(gc.created_at) as last_active,
+            COUNT(gc.id) as total_messages,
+            MAX(gc.message) as last_message,
+            MAX(CASE WHEN gc.message LIKE '%buy%' 
+                OR gc.message LIKE '%purchase%' 
+                OR gc.message LIKE '%contact%'
+                OR gc.message LIKE '%call%'
+                OR gc.message LIKE '%owner%'
+                OR gc.message LIKE '%price%'
+                OR gc.message LIKE '%cost%'
+                OR gc.reply LIKE '%responsible%'
+                OR gc.reply LIKE '%contact%'
+                THEN 1 ELSE 0 END) as call_recommended
         FROM guests g
-        LEFT JOIN guest_conversations gc ON gc.guest_id = g.id
+        LEFT JOIN guest_conversations gc ON g.id = gc.guest_id
         WHERE g.owner_id = ?
-        GROUP BY g.id
+        GROUP BY g.id, g.name, g.mobile
         ORDER BY last_active DESC
     `;
-        db.query(sql, [userId], callback);
+        db.query(query, [userId], callback);
     },
 
     // ✅ Training Questions CRUD
