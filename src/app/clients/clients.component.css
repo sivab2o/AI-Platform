@@ -231,3 +231,68 @@ small {
 .view-btn:hover {
     opacity: 0.85;
 }
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 18px;
+    text-decoration: none;
+    transition: transform 0.2s;
+}
+
+.action-btn:hover {
+    transform: scale(1.2);
+}
+
+.call-btn {
+    background: #e8f5e9;
+}
+
+.whatsapp-btn {
+    background: #e8f5e9;
+}
+
+.recommend-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.recommend-badge.yes {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.recommend-badge.no {
+    background: #fce4ec;
+    color: #c62828;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.action-btn:hover {
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.call-btn {
+    background: #e8eaf6;
+}
+
+.whatsapp-btn {
+    background: #e8f5e9;
+}

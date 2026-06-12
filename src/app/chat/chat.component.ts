@@ -112,8 +112,12 @@ export class ChatComponent implements OnInit, AfterViewChecked {
   }
 
   logout() {
-    localStorage.clear();
-    this.router.navigate(['/login']);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    // ✅ Force navigate and reload
+    this.router.navigate(['/login']).then(() => {
+      window.location.href = '/login';
+    });
   }
 
   Dashboard() { this.router.navigate(['/dashboard']); }

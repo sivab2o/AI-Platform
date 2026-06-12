@@ -22,7 +22,12 @@
             "tsConfig": "tsconfig.app.json",
             "assets": [
               "src/favicon.ico",
-              "src/assets"
+              "src/assets",
+              {
+                "glob": "ckeditor.js",
+                "input": "src/assets/ckeditor",
+                "output": "assets/ckeditor"
+              }
             ],
             "styles": [
               "node_modules/bootstrap/dist/css/bootstrap.min.css",
@@ -38,7 +43,8 @@
               "@ckeditor/ckeditor5-build-classic",
               "axios",
               "form-data",
-              "follow-redirects"
+              "follow-redirects",
+              "ckeditor"
             ]
           },
           "configurations": {

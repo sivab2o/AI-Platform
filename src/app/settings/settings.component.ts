@@ -132,7 +132,10 @@ export class SettingsComponent implements OnInit {
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    this.router.navigate(['/login']);
+    // ✅ Force navigate and reload
+    this.router.navigate(['/login']).then(() => {
+      window.location.href = '/login';
+    });
   }
 
   Dashboard() { this.router.navigate(['/dashboard']); }

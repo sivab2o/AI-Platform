@@ -43,6 +43,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   allSuggestions: string[] = [];
   askedCount: number = 0;
   maxQuickReplies: number = 3;
+  quickRepliesDismissed: boolean = false;
 
   // ✅ Voice variables
   isListening: boolean = false;
@@ -61,9 +62,9 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
 
     if (typeof window !== 'undefined') {
       this.synthesis = window.speechSynthesis;
-      // ✅ Voices load async — wait for them
+      window.speechSynthesis.getVoices();
       window.speechSynthesis.onvoiceschanged = () => {
-        console.log('Voices loaded:', window.speechSynthesis.getVoices().map(v => v.name));
+        window.speechSynthesis.getVoices();
       };
     }
 
@@ -86,6 +87,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       });
   }
 
+  // ✅ Submit form -> directly start chat (no language selection)
   async submitForm() {
     if (!this.guestName.trim()) {
       alert('Name is required!'); return;
@@ -103,6 +105,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       });
 
       if (checkRes.data.exists) {
+        // ✅ Returning user
         this.guestId = checkRes.data.guestId;
         this.collectingInfo = false;
 
@@ -116,14 +119,22 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
             this.messages.push({ sender: 'bot', text: c.reply, time: this.formatTime(c.created_at) });
           });
         }
-        setTimeout(() => {
-          const welcomeMsg = `Welcome back, ${this.guestName}! How can I help you today?`;
-          this.addBotMessage(`Welcome back, ${this.guestName}! 👋 How can I help you today?`);
-          this.speakReply(welcomeMsg); // ✅ Speak welcome back
+
+        setTimeout(async () => {
+          try {
+            const welcomeRes = await axios.post('http://localhost:3000/api/ai/guest/welcome', {
+              ownerId: this.ownerId,
+              guestId: this.guestId,
+              guestName: this.guestName,
+              returning: true
+            });
+            this.addBotMessage(welcomeRes.data.reply);
+          } catch (err) { console.error(err); }
           this.cdr.detectChanges();
         }, 300);
 
       } else {
+        // ✅ New user
         const res = await axios.post('http://localhost:3000/api/ai/guest/register', {
           name: this.guestName,
           email: '',
@@ -134,10 +145,19 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
         this.collectingInfo = false;
 
         setTimeout(async () => {
-          const welcomeMsg = `Welcome back, ${this.guestName}! How can I help you today?`;
-          this.addBotMessage(`Welcome back, ${this.guestName}! 🎉 How can I help you today?`);
-          this.speakReply(welcomeMsg); // ✅ Only first welcome speaks
+          try {
+            const welcomeRes = await axios.post('http://localhost:3000/api/ai/guest/welcome', {
+              ownerId: this.ownerId,
+              guestId: this.guestId,
+              guestName: this.guestName,
+              returning: false
+            });
+            const welcomeMsg = welcomeRes.data.reply;
+            this.addBotMessage(welcomeMsg);
+            setTimeout(() => this.speakReply(welcomeMsg), 800);
+          } catch (err) { console.error(err); }
           await this.loadQuickReplies();
+          this.cdr.detectChanges();
         }, 300);
       }
 
@@ -181,6 +201,8 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   }
 
   async loadQuickReplies(): Promise<void> {
+    if (this.quickRepliesDismissed) return; // ✅ Don't show again
+
     try {
       const res = await axios.post(
         'http://localhost:3000/api/ai/guest/suggestions',
@@ -200,12 +222,43 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
     this.quickReplies = this.quickReplies.filter(q => q !== question);
     this.showQuickReplies = false;
     this.askedCount++;
-    this.userMessage = question;
-    await this.sendMessage();
+
+    const msg = question;
+    this.addUserMessage(msg);
+    this.isTyping = true;
+    this.cdr.detectChanges();
+
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/api/ai/guest/chat',
+        {
+          ownerId: this.ownerId,
+          guestId: this.guestId,
+          guestName: this.guestName,
+          message: msg
+        }
+      );
+
+      const reply = res.data.reply;
+      this.messages.push({ sender: 'bot', text: reply, time: this.formatTime() });
+
+      if (this.isVoiceMode) {
+        this.speakReply(reply);
+        this.isVoiceMode = false;
+      }
+    } catch (err) {
+      this.messages.push({
+        sender: 'bot',
+        text: '❌ Sorry, something went wrong. Please try again.',
+        time: this.formatTime()
+      });
+    }
+
+    this.isTyping = false;
+    this.cdr.detectChanges();
   }
 
   async submitStep(): Promise<void> {
-
     if (this.step === 'name') {
       if (!this.guestName.trim()) {
         this.addBotMessage('⚠️ Name is required! Please enter your name to continue.');
@@ -272,7 +325,17 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
           }
 
           setTimeout(async () => {
-            this.addBotMessage(`Welcome back, ${this.guestName}! 👋 How can I help you today?`);
+            try {
+              const welcomeRes = await axios.post('http://localhost:3000/api/ai/guest/welcome', {
+                ownerId: this.ownerId,
+                guestId: this.guestId,
+                guestName: this.guestName,
+                returning: true
+              });
+              this.addBotMessage(welcomeRes.data.reply);
+            } catch (err) {
+              this.addBotMessage(`Welcome back, ${this.guestName}!`);
+            }
             this.cdr.detectChanges();
           }, 500);
 
@@ -285,7 +348,19 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
           this.collectingInfo = false;
 
           setTimeout(async () => {
-            this.addBotMessage(`Thank you, ${this.guestName}! 🎉 How can I help you today?`);
+            try {
+              const welcomeRes = await axios.post('http://localhost:3000/api/ai/guest/welcome', {
+                ownerId: this.ownerId,
+                guestId: this.guestId,
+                guestName: this.guestName,
+                returning: false
+              });
+              const welcomeMsg = welcomeRes.data.reply;
+              this.addBotMessage(welcomeMsg);
+              setTimeout(() => this.speakReply(welcomeMsg), 800);
+            } catch (err) {
+              this.addBotMessage(`Welcome, ${this.guestName}!`);
+            }
             await this.loadQuickReplies();
           }, 500);
         }
@@ -331,7 +406,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
           const transcript = event.results[0][0].transcript;
           this.userMessage = transcript;
           this.isListening = false;
-          this.isVoiceMode = true; // ✅ Set voice mode
+          this.isVoiceMode = true;
           this.cdr.detectChanges();
           setTimeout(() => this.sendMessage(), 300);
         };
@@ -372,14 +447,11 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'en-IN';
       utterance.rate = 0.9;
-      utterance.pitch = 1.5; // ✅ Higher pitch for female
+      utterance.pitch = 1.5;
       utterance.volume = 1;
 
-      // ✅ Get all voices
       const voices = this.synthesis.getVoices();
-      console.log('Available voices:', voices.map((v: any) => v.name));
 
-      // ✅ Priority female voice list
       const femaleVoice = voices.find((v: any) =>
         v.name.includes('Google UK English Female')
       ) || voices.find((v: any) =>
@@ -387,19 +459,11 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       ) || voices.find((v: any) =>
         v.name.includes('Zira')
       ) || voices.find((v: any) =>
-        v.name.includes('Heera')
-      ) || voices.find((v: any) =>
         v.name.toLowerCase().includes('female')
-      ) || voices.find((v: any) =>
-        v.name.includes('Google हिन्दी') === false &&
-        v.name.includes('female')
       );
 
       if (femaleVoice) {
-        console.log('Using voice:', femaleVoice.name);
         utterance.voice = femaleVoice;
-      } else {
-        console.log('No female voice found, using pitch adjustment');
       }
 
       utterance.onstart = () => {
@@ -412,15 +476,17 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
         this.cdr.detectChanges();
       };
 
+      utterance.onerror = () => {
+        this.isSpeaking = false;
+        this.cdr.detectChanges();
+      };
+
       this.synthesis.speak(utterance);
     };
 
-    // ✅ Wait for voices to load if not ready
     const voices = this.synthesis.getVoices();
     if (voices.length === 0) {
-      this.synthesis.onvoiceschanged = () => {
-        speak();
-      };
+      this.synthesis.onvoiceschanged = () => { speak(); };
     } else {
       speak();
     }
@@ -439,6 +505,12 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
 
     const msg = this.userMessage.trim();
     this.userMessage = '';
+
+    // ✅ User typed their own message — permanently hide quick replies
+    this.quickRepliesDismissed = true;
+    this.showQuickReplies = false;
+    this.quickReplies = [];
+
     this.addUserMessage(msg);
     this.isTyping = true;
     this.cdr.detectChanges();
@@ -462,10 +534,9 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
         time: this.formatTime()
       });
 
-      // ✅ Speak only if voice mode
       if (this.isVoiceMode) {
         this.speakReply(reply);
-        this.isVoiceMode = false; // ✅ Reset after speaking
+        this.isVoiceMode = false;
       }
 
     } catch (err) {

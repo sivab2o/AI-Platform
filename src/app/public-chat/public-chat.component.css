@@ -508,3 +508,100 @@
     flex-shrink: 0;
     animation: pulse 1.2s infinite;
 }
+
+/* ✅ Language Selection */
+.language-select-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 20px;
+}
+
+.language-select-body {
+    background: white;
+    border-radius: 16px;
+    padding: 30px 24px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.lang-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.lang-select-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e2673;
+    margin-bottom: 6px;
+}
+
+.lang-select-sub {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 20px;
+}
+
+.lang-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.lang-option-btn {
+    padding: 10px 20px;
+    border: 2px solid #ddd;
+    border-radius: 25px;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #444;
+    transition: all 0.2s;
+    width: auto !important;
+    margin-top: 0 !important;
+}
+
+.lang-option-btn:hover {
+    border-color: #DD1977;
+    color: #DD1977;
+}
+
+.lang-option-btn.selected {
+    background: #1e2673;
+    border-color: #1e2673;
+    color: white;
+    font-weight: 600;
+}
+
+.btn-back-form {
+    background: none;
+    border: 1px solid #ddd;
+    color: #888;
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-top: 10px;
+    width: auto !important;
+}
+
+.btn-back-form:hover {
+    border-color: #1e2673;
+    color: #1e2673;
+}
+
+/* ✅ Language badge in chat */
+.chat-lang-badge {
+    text-align: center;
+    font-size: 11px;
+    color: #888;
+    padding: 4px 0;
+    background: #f5f6fa;
+}

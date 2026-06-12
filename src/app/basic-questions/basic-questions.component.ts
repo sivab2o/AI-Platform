@@ -28,7 +28,7 @@ export class BasicQuestionsComponent implements OnInit {
   formOptions: string[] = ['', '', ''];
   formSortOrder: number = 0;
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef) {}
+  constructor(private router: Router, private cdr: ChangeDetectorRef) { }
 
   ngOnInit() {
     if (typeof window !== 'undefined') {
@@ -159,5 +159,12 @@ export class BasicQuestionsComponent implements OnInit {
   Dashboard() { this.router.navigate(['/dashboard']); }
   Clients() { this.router.navigate(['/clients']); }
   Settings() { this.router.navigate(['/settings']); }
-  logout() { localStorage.clear(); this.router.navigate(['/login']); }
+  logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    // ✅ Force navigate and reload
+    this.router.navigate(['/login']).then(() => {
+      window.location.href = '/login';
+    });
+  }
 }

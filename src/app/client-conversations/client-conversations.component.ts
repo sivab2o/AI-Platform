@@ -25,7 +25,7 @@ export class ClientConversationsComponent implements OnInit, AfterViewChecked {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit() {
     if (typeof window !== 'undefined') {
@@ -47,7 +47,7 @@ export class ClientConversationsComponent implements OnInit, AfterViewChecked {
       if (this.chatBox) {
         this.chatBox.nativeElement.scrollTop = this.chatBox.nativeElement.scrollHeight;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   loadConversations() {
@@ -87,5 +87,13 @@ export class ClientConversationsComponent implements OnInit, AfterViewChecked {
   Dashboard() { this.router.navigate(['/dashboard']); }
   Chat() { this.router.navigate(['/chat']); }
   Settings() { this.router.navigate(['/settings']); }
-  logout() { localStorage.clear(); this.router.navigate(['/login']); }
+  BasicQuestions() { this.router.navigate(['/basic-questions']); }
+    logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    // ✅ Force navigate and reload
+    this.router.navigate(['/login']).then(() => {
+      window.location.href = '/login';
+    });
+  }
 }

@@ -19,7 +19,7 @@ export class ClientsComponent implements OnInit {
   searchText: string = '';
   isLoading: boolean = true;
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef) {}
+  constructor(private router: Router, private cdr: ChangeDetectorRef) { }
 
   ngOnInit() {
     if (typeof window !== 'undefined') {
@@ -76,9 +76,14 @@ export class ClientsComponent implements OnInit {
   Dashboard() { this.router.navigate(['/dashboard']); }
   Chat() { this.router.navigate(['/chat']); }
   Settings() { this.router.navigate(['/settings']); }
+  BasicQuestions() { this.router.navigate(['/basic-questions']); }
 
-  logout() {
-    localStorage.clear();
-    this.router.navigate(['/login']);
+   logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    // ✅ Force navigate and reload
+    this.router.navigate(['/login']).then(() => {
+      window.location.href = '/login';
+    });
   }
 }
