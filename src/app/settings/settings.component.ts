@@ -56,7 +56,7 @@ export class SettingsComponent implements OnInit {
   }
 
   loadLang() {
-    axios.get(`http://localhost:3000/api/ai/user/lang/${this.user.id}`)
+    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/user/lang/${this.user.id}`)
       .then(res => {
         this.selectedLang = res.data.lang || 'en';
         if (this.selectedLang === 'en') {
@@ -95,7 +95,7 @@ export class SettingsComponent implements OnInit {
   async saveSettings() {
     this.isSaving = true;
     try {
-      await axios.put(`http://localhost:3000/api/ai/user/lang/${this.user.id}`, {
+      await axios.put(`https://aiemployeeplatform.leadsfactory.info/api/ai/user/lang/${this.user.id}`, {
         lang: this.selectedLang
       });
       localStorage.setItem('lang', this.selectedLang);

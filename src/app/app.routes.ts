@@ -19,7 +19,8 @@ export const routes: Routes = [
     { path: 'clients/:guestId/conversations', component: ClientConversationsComponent, canActivate: [AuthGuard] },
     { path: 'basic-questions', component: BasicQuestionsComponent, canActivate: [AuthGuard] },
     { path: 'chat', component: ChatComponent, canActivate: [AuthGuard] },
-    { path: 'user/:ownerId', component: PublicChatComponent, canActivate: [AuthGuard] },
+    // { path: 'user/:ownerId', component: PublicChatComponent, canActivate: [AuthGuard] },
+    { path: 'user/:ownerId', component: PublicChatComponent },
     { path: 'settings', component: SettingsComponent, canActivate: [AuthGuard] },
     { path: '', redirectTo: '/login', pathMatch: 'full' },
     { path: '**', redirectTo: '/login' } // ✅ Add this wildcard

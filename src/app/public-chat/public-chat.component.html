@@ -1,10 +1,9 @@
 <div class="public-chat-wrapper">
     <div class="chat-wrapper">
 
-        <!-- ✅ Step 1: Guest Form -->
-        <div class="guest-form" *ngIf="collectingInfo && step === 'form'">
+        <!-- ✅ Step 1: Guest Form FIRST -->
+        <div class="guest-form" *ngIf="collectingInfo && !showLangSelect && !formSubmitted && step === 'form'">
             <div class="guest-form-body">
-                <!-- <div class="form-logo">🤖</div> -->
                 <p class="form-title">Welcome! Enter your details to start chatting</p>
                 <div class="form-group">
                     <label>Full Name *</label>
@@ -12,15 +11,32 @@
                 </div>
                 <div class="form-group">
                     <label>Mobile Number *</label>
-                    <input type="tel" [(ngModel)]="guestMobile" placeholder="Enter 10-digit mobile number" maxlength="10" />
+                    <input type="tel" [(ngModel)]="guestMobile" placeholder="Enter 10-digit mobile number"
+                        maxlength="10" />
                 </div>
-                <button class="btn-start-chat" (click)="submitForm()">
-                    Start Chatting 💬
+                <button class="btn-start-chat" (click)="goToLangSelect()">
+                    Next ➤
                 </button>
             </div>
         </div>
 
-        <!-- ✅ Step 2: Chat -->
+        <!-- ✅ Step 2: Language Selection SECOND -->
+        <div class="lang-select-screen" *ngIf="collectingInfo && showLangSelect">
+            <div class="lang-select-body">
+                <div class="lang-icon">🌐</div>
+                <h3 class="lang-select-title">Choose Your Language</h3>
+                <p class="lang-select-sub">Select the language you want to chat in</p>
+                <div class="lang-grid">
+                    <button class="lang-card" *ngFor="let lang of languages" (click)="selectLanguage(lang)">
+                        <span class="lang-flag">{{ lang.flag }}</span>
+                        <span class="lang-name">{{ lang.name }}</span>
+                    </button>
+                </div>
+                <button class="btn-back-form" (click)="showLangSelect = false">← Back</button>
+            </div>
+        </div>
+
+        <!-- ✅ Step 3: Chat -->
         <ng-container *ngIf="!collectingInfo">
             <div class="chat-messages" #chatMessages>
 
@@ -51,6 +67,8 @@
                     </div>
                 </div>
 
+
+
                 <!-- Typing indicator -->
                 <div class="bot-msg-wrapper" *ngIf="isTyping">
                     <div class="avatar">🤖</div>
@@ -61,9 +79,33 @@
 
             </div>
 
+            <!-- ✅ Fix 1: Listening indicator -->
+            <!-- ✅ Voice status indicator — listening waves / speaking pulse -->
+          <div class="voice-status" *ngIf="isMicActive && !isTyping && !isSpeaking">
+    <div class="wave-bars">
+        <span class="bar" [style.height.px]="6 + micLevel * 8"></span>
+        <span class="bar" [style.height.px]="6 + micLevel * 14"></span>
+        <span class="bar" [style.height.px]="6 + micLevel * 20"></span>
+        <span class="bar" [style.height.px]="6 + micLevel * 26"></span>
+        <span class="bar" [style.height.px]="6 + micLevel * 30"></span>
+        <span class="bar" [style.height.px]="6 + micLevel * 26"></span>
+        <span class="bar" [style.height.px]="6 + micLevel * 20"></span>
+        <span class="bar" [style.height.px]="6 + micLevel * 14"></span>
+        <span class="bar" [style.height.px]="6 + micLevel * 8"></span>
+    </div>
+</div>
+
+            <div class="voice-status speaking" *ngIf="isSpeaking">
+                <div class="speak-pulse">
+                    <span class="pulse-ring"></span>
+                    <span class="pulse-core">🔊</span>
+                </div>
+                <span class="voice-status-text">✨ Answering you...</span>
+            </div>
+
             <div class="chat-input-box">
                 <input type="text" [(ngModel)]="userMessage" (keyup.enter)="sendMessage()"
-                    placeholder="{{ isListening ? 'Listening...' : 'Type or speak your message...' }}"
+                    placeholder="{{ isListening ? 'Listening... speak now 🎙️' : 'You can talk or type now...' }}"
                     [disabled]="isTyping" />
 
                 <!-- ✅ Stop speaking button -->
@@ -71,14 +113,18 @@
                     🔊
                 </button>
 
-                <!-- ✅ Voice button -->
-                <button class="voice-input-btn" (click)="startVoiceInput()" [class.listening]="isListening"
-                    [disabled]="isTyping" title="{{ isListening ? 'Stop listening' : 'Speak' }}">
-                    {{ isListening ? '🛑' : '🎤' }}
+                <!-- ✅ Mic button -->
+                <button class="voice-input-btn" (click)="startVoiceInput()" [class.listening]="isMicActive"
+                    [class.not-listening]="!isMicActive" [disabled]="isTyping"
+                    title="{{ isMicActive ? 'Stop listening' : 'Click to speak' }}">
+                    🎤
                 </button>
 
                 <!-- ✅ Send button -->
-                <button (click)="sendMessage()" [disabled]="isTyping || !userMessage.trim()">➤</button>
+                <button class="send-btn" (click)="sendMessage()" [disabled]="isTyping || !userMessage.trim()">➤</button>
+
+                <!-- ✅ Close button -->
+                <button class="close-btn" (click)="closeChat()" title="Close chat">✕</button>
             </div>
         </ng-container>
 

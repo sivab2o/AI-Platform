@@ -93,7 +93,7 @@ export class LanguageService {
   }
 
   async translateAndCache(lang: string): Promise<void> {
-    const res = await axios.post('http://localhost:3000/api/ai/translate', {
+    const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/translate', {
       texts: this.allTexts,
       targetLang: lang
     });
@@ -104,7 +104,6 @@ export class LanguageService {
       localStorage.setItem(this.getKey(lang, i), translated[i]);
     });
 
-    console.log('✅ All translations cached');
   }
 
   get(text: string, lang: string): string {
@@ -125,13 +124,11 @@ export class LanguageService {
     if (cached) {
       const cachedMap = JSON.parse(cached);
       const result = texts.map(t => cachedMap[t] || t);
-      console.log('✅ Loaded from cache:', lang);
       return result;
     }
 
     // ✅ Not cached — call API
-    console.log('🌐 Calling API for:', lang);
-    const res = await axios.post('http://localhost:3000/api/ai/translate', {
+    const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/translate', {
       texts,
       targetLang: lang
     });
@@ -145,7 +142,6 @@ export class LanguageService {
     });
     localStorage.setItem(cacheKey, JSON.stringify(cacheMap));
 
-    console.log('✅ Translated and cached:', lang);
     return translated;
   }
 }

@@ -49,8 +49,8 @@
         <!-- ✅ Show link after trained -->
         <div class="your-link-banner" *ngIf="isTrained && !showQuestionnaire && !showTrainBox">
             <span>🔗 Your shareable link:</span>
-            <a [href]="'http://localhost:4200/user/' + user?.user_id" target="_blank">
-                http://localhost:4200/user/{{ user?.user_id }}
+            <a [href]="'https://aiemployeeplatform.leadsfactory.info/user/' + user?.user_id" target="_blank">
+                https://aiemployeeplatform.leadsfactory.info/{{ user?.user_id }}
             </a>
             <button class="copy-btn" (click)="copyLink()">📋 Copy</button>
         </div>
@@ -121,8 +121,20 @@
                     <textarea *ngIf="q.fieldType === 'textarea'" [(ngModel)]="q.value" [placeholder]="q.placeholder"
                         class="q-textarea" rows="3"></textarea>
 
-                    <!-- Time -->
-                    <input *ngIf="q.fieldType === 'time'" type="time" [(ngModel)]="q.value" class="q-input" />
+                    <!-- Office Opening Time -->
+                    <div *ngIf="q.fieldType === 'time'" class="q-time-group">
+                        <select [(ngModel)]="q.valueHour" (ngModelChange)="updateTimeValue(q)" class="q-time-select">
+                            <option *ngFor="let h of hourOptions" [value]="h">{{ h }}</option>
+                        </select>
+                        :
+                        <select [(ngModel)]="q.valueMinute" (ngModelChange)="updateTimeValue(q)" class="q-time-select">
+                            <option *ngFor="let m of minuteOptions" [value]="m">{{ m }}</option>
+                        </select>
+                        <select [(ngModel)]="q.valueAmPm" (ngModelChange)="updateTimeValue(q)" class="q-time-select">
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                        </select>
+                    </div>
 
                     <!-- Radio -->
                     <div *ngIf="q.fieldType === 'radio'" class="q-radio-group">
@@ -134,7 +146,8 @@
 
                     <!-- Yes/No -->
                     <div *ngIf="q.fieldType === 'yes_no'" class="q-yes-no">
-                        <button type="button" [class.selected]="q.value === 'Yes'" (click)="q.value = 'Yes'">✅ Yes</button>
+                        <button type="button" [class.selected]="q.value === 'Yes'" (click)="q.value = 'Yes'">✅
+                            Yes</button>
                         <button type="button" [class.selected]="q.value === 'No'" (click)="q.value = 'No'">❌ No</button>
                     </div>
 
@@ -192,8 +205,8 @@
             <!-- ✅ Link banner -->
             <div class="link-banner">
                 <span>🔗 Your link:</span>
-                <a [href]="'http://localhost:4200/user/' + user?.user_id" target="_blank">
-                    http://localhost:4200/user/{{ user?.user_id }}
+                <a [href]="'https://aiemployeeplatform.leadsfactory.info/user/' + user?.user_id" target="_blank">
+                    'https://aiemployeeplatform.leadsfactory.info/user/{{ user?.user_id }}
                 </a>
                 <button type="button" class="copy-btn" (click)="copyLink()">📋 Copy</button>
             </div>
@@ -281,8 +294,8 @@
                     <span class="master-type-badge">📄 File Upload Mode</span>
                 </div>
 
-                <div class="file-drop-zone" (click)="triggerMasterFileUpload()"
-                    (dragover)="onDragOver($event)" (drop)="onFileDrop($event)">
+                <div class="file-drop-zone" (click)="triggerMasterFileUpload()" (dragover)="onDragOver($event)"
+                    (drop)="onFileDrop($event)">
                     <div class="file-drop-icon">📂</div>
                     <p class="file-drop-title">Click to upload or drag &amp; drop</p>
                     <p class="file-drop-sub">Supports: PDF, Excel, DOCX, TXT, CSV</p>
@@ -336,7 +349,8 @@
                 <div class="url-input-box">
                     <label class="url-label">Enter your website URL</label>
                     <div class="url-input-row">
-                        <input type="url" [(ngModel)]="websiteUrl" placeholder="https://example.com" class="url-input" />
+                        <input type="url" [(ngModel)]="websiteUrl" placeholder="https://example.com"
+                            class="url-input" />
                         <button type="button" class="btn-fetch-url" (click)="fetchWebsiteContent()"
                             [disabled]="isFetchingUrl || !websiteUrl">
                             {{ isFetchingUrl ? '⏳ Fetching...' : '🔍 Fetch Content' }}

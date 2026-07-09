@@ -20,14 +20,12 @@ export class LoginComponent {
   constructor(private router: Router) { }
 
   onSubmit() {
-    axios.post('http://localhost:3000/api/auth/login', {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/auth/login', {
       email: this.email,
       password: this.password
     })
       .then(response => {
 
-        console.log(response.data);
-        console.log('FULL RESPONSE:', response.data);
         // ✅ Store token
         localStorage.setItem('token', response.data.token);
 

@@ -1878,3 +1878,25 @@
     overflow-y: auto;
     background: white;
 }
+
+.q-time-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.q-time-select {
+    padding: 10px 12px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    font-family: inherit;
+    background: white;
+    cursor: pointer;
+    min-width: 70px;
+}
+
+.q-time-select:focus {
+    border-color: #DD1977;
+}

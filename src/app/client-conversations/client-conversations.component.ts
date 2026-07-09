@@ -52,7 +52,7 @@ export class ClientConversationsComponent implements OnInit, AfterViewChecked {
 
   loadConversations() {
     this.isLoading = true;
-    axios.get(`http://localhost:3000/api/ai/guest/conversations/${this.guestId}`)
+    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/guest/conversations/${this.guestId}`)
       .then(res => {
         const data = Array.isArray(res.data) ? res.data : [];
         this.messages = data;

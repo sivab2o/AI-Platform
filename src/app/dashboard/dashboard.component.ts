@@ -15,6 +15,9 @@ interface TrainingQuestion {
   mandatory: boolean;
   placeholder: string;
   value: any;
+  valueHour?: string;
+  valueMinute?: string;
+  valueAmPm?: string;
 }
 
 @Component({
@@ -54,6 +57,8 @@ export class DashboardComponent implements OnInit {
   masterUploadedFiles: any[] = [];
   websiteUrl: string = '';
   isFetchingUrl: boolean = false;
+  hourOptions: string[] = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+  minuteOptions: string[] = ['00', '15', '30', '45'];
 
   @ViewChild('fileInput') fileInput!: any;
   @ViewChild('imageInput') imageInput!: any;
@@ -102,6 +107,15 @@ export class DashboardComponent implements OnInit {
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
+  }
+
+  updateTimeValue(q: TrainingQuestion) {
+    if (!q.valueHour || !q.valueMinute || !q.valueAmPm) return;
+    let hour = parseInt(q.valueHour, 10);
+    if (q.valueAmPm === 'PM' && hour !== 12) hour += 12;
+    if (q.valueAmPm === 'AM' && hour === 12) hour = 0;
+    const hourStr = hour.toString().padStart(2, '0');
+    q.value = `${hourStr}:${q.valueMinute}`; // stored as 24hr for backend
   }
 
   get currentSectionQuestions(): TrainingQuestion[] {
@@ -253,7 +267,7 @@ export class DashboardComponent implements OnInit {
 
     this.masterTrainingText = (this.masterTrainingText || '') + htmlContent;
 
-    axios.post('http://localhost:3000/api/ai/train/master', {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train/master', {
       userId: this.user.user_id,
       masterData: this.masterTrainingText
     }).then(() => {
@@ -339,7 +353,7 @@ export class DashboardComponent implements OnInit {
     const formData = new FormData();
     formData.append('file', file);
 
-    axios.post('http://localhost:3000/api/ai/extract-file', formData, {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/extract-file', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }).then(res => {
       const text = res.data.text || '';
@@ -373,7 +387,7 @@ export class DashboardComponent implements OnInit {
     this.cdr.detectChanges();
 
     try {
-      const res = await axios.post('http://localhost:3000/api/ai/fetch-url', {
+      const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/fetch-url', {
         url: this.websiteUrl
       });
 
@@ -415,7 +429,7 @@ export class DashboardComponent implements OnInit {
     const formData = new FormData();
     formData.append('file', file);
 
-    axios.post('http://localhost:3000/api/ai/extract-file', formData, {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/extract-file', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }).then(res => {
       const text = res.data.text || '';
@@ -484,7 +498,7 @@ export class DashboardComponent implements OnInit {
 
   loadTrainingData() {
     const userId = this.user?.user_id;
-    axios.get(`http://localhost:3000/api/ai/train/${userId}`)
+    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/train/${userId}`)
       .then(res => {
         if (res.data && res.data.training_data) {
           this.originalTrainingText = res.data.training_data;
@@ -503,7 +517,7 @@ export class DashboardComponent implements OnInit {
 
   loadDashboardStats() {
     const userId = this.user?.user_id;
-    axios.get(`http://localhost:3000/api/ai/dashboard/stats/${userId}`)
+    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/dashboard/stats/${userId}`)
       .then(res => {
         this.totalConversations = res.data.totalConversations;
         this.totalClients = res.data.totalClients;
@@ -757,11 +771,37 @@ export class DashboardComponent implements OnInit {
       if (!question) return;
       if (question.fieldType === 'checkbox') {
         question.value = value.split(',').map(v => v.trim()).filter(v => v !== '');
+      } else if (question.fieldType === 'time') {
+        question.value = value; // "09:30"
+        this.populateTimeDropdowns(question, value); // ✅ NEW
       } else {
         question.value = value;
       }
     });
     this.cdr.detectChanges();
+  }
+
+  // ✅ NEW METHOD - convert 24hr "HH:MM" into dropdown values
+  populateTimeDropdowns(q: TrainingQuestion, value: string) {
+    const parts = value.split(':');
+    if (parts.length !== 2) return;
+    let hour = parseInt(parts[0], 10);
+    const minute = parts[1];
+
+    let amPm = 'AM';
+    if (hour === 0) {
+      hour = 12;
+      amPm = 'AM';
+    } else if (hour === 12) {
+      amPm = 'PM';
+    } else if (hour > 12) {
+      hour = hour - 12;
+      amPm = 'PM';
+    }
+
+    q.valueHour = hour.toString().padStart(2, '0');
+    q.valueMinute = this.minuteOptions.includes(minute) ? minute : minute.padStart(2, '0');
+    q.valueAmPm = amPm;
   }
 
   startMasterTraining() {
@@ -793,7 +833,6 @@ export class DashboardComponent implements OnInit {
     }
 
     if (!(window as any).ClassicEditor) {
-      console.log('ClassicEditor not found, trying to load script...');
       this.loadCKEditorScript(() => {
         this.ckRetryCount++;
         setTimeout(() => this.initCKEditor(), 500);
@@ -814,7 +853,6 @@ export class DashboardComponent implements OnInit {
     const script = document.createElement('script');
     script.src = 'assets/ckeditor/ckeditor.js';
     script.onload = () => {
-      console.log('✅ CKEditor script loaded dynamically!');
       callback();
     };
     script.onerror = () => {
@@ -837,7 +875,6 @@ export class DashboardComponent implements OnInit {
       initialData: this.masterTrainingText || ''
     }).then((editor: any) => {
       this.ckEditorInstance = editor;
-      console.log('✅ CKEditor initialized with plugins!');
       editor.model.document.on('change:data', () => {
         this.masterTrainingText = editor.getData();
         this.cdr.detectChanges();
@@ -865,7 +902,7 @@ export class DashboardComponent implements OnInit {
     this.originalTrainingText = this.trainingText;
     this.showQuestionnaire = false;
 
-    axios.post('http://localhost:3000/api/ai/train', {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train', {
       userId: this.user.user_id,
       name: this.user.name,
       email: this.user.email,
@@ -894,7 +931,7 @@ export class DashboardComponent implements OnInit {
   }
 
   copyLink() {
-    const link = `http://localhost:3000/user/${this.user.user_id}`;
+    const link = `https://aiemployeeplatform.leadsfactory.info/user/${this.user.user_id}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(link).then(() => {
         Swal.fire({ icon: 'success', title: 'Link Copied!', timer: 1000, showConfirmButton: false, confirmButtonColor: '#DD1977' });
@@ -927,7 +964,7 @@ export class DashboardComponent implements OnInit {
     if (!this.trainingText.trim()) { alert('Please enter training data'); return; }
     const dataToSave = this.trainingText;
     this.originalTrainingText = this.trainingText;
-    axios.post('http://localhost:3000/api/ai/train', {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train', {
       userId: this.user.user_id, name: this.user.name, email: this.user.email,
       mobile: this.user.mobile, trainingData: dataToSave
     }).then(() => {
@@ -944,7 +981,7 @@ export class DashboardComponent implements OnInit {
     if (!this.masterTrainingText || !this.masterTrainingText.trim()) {
       alert('Please enter master training data'); return;
     }
-    axios.post('http://localhost:3000/api/ai/train/master', {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train/master', {
       userId: this.user.user_id, masterData: this.masterTrainingText
     }).then(() => {
       this.showTrainBox = false;
@@ -966,7 +1003,7 @@ export class DashboardComponent implements OnInit {
     if (!this.trainingText.trim()) { alert('Please enter training data'); return; }
     this.isExpanded = false;
     this.originalTrainingText = this.trainingText;
-    axios.post('http://localhost:3000/api/ai/train', {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train', {
       userId: this.user.user_id, name: this.user.name, email: this.user.email,
       mobile: this.user.mobile, trainingData: this.trainingText
     }).then(() => {
