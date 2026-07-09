@@ -7,8 +7,18 @@ const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
-
-app.use(cors());
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // max 100 requests per IP
+});
+app.use(cors({
+  origin: ['http://187.127.166.122', 'http://localhost:4200', 'http://localhost:3000','https://aiemployeeplatform.leadsfactory.info/login'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE']
+}));
+app.use(helmet());
+app.use('/api/', limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);

@@ -34,7 +34,6 @@ const translateText = async (req, res) => {
       allResults.push(...translations);
     }
 
-    console.log(`✅ Translated ${allResults.length} texts instantly!`);
     res.json({ translations: allResults });
 
   } catch (err) {

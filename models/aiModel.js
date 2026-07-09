@@ -103,6 +103,8 @@ const AIModel = {
             g.id,
             g.name,
             g.mobile,
+            g.summary,
+            g.interest_score,
             MAX(gc.created_at) as last_active,
             COUNT(gc.id) as total_messages,
             MAX(gc.message) as last_message,
@@ -119,7 +121,7 @@ const AIModel = {
         FROM guests g
         LEFT JOIN guest_conversations gc ON g.id = gc.guest_id
         WHERE g.owner_id = ?
-        GROUP BY g.id, g.name, g.mobile
+        GROUP BY g.id, g.name, g.mobile, g.summary, g.interest_score
         ORDER BY last_active DESC
     `;
         db.query(query, [userId], callback);
@@ -144,7 +146,17 @@ const AIModel = {
     deleteQuestion: (id, callback) => {
         const sql = `DELETE FROM training_questions WHERE id=?`;
         db.query(sql, [id], callback);
-    }
+    },
+
+    updateGuestSummary: (guestId, summary, callback) => {
+        const sql = `UPDATE guests SET summary = ? WHERE id = ?`;
+        db.query(sql, [summary, guestId], callback);
+    },
+
+    updateGuestScore: (guestId, score, callback) => {
+        const sql = `UPDATE guests SET interest_score = ? WHERE id = ?`;
+        db.query(sql, [score, guestId], callback);
+    },
 };
 
 module.exports = AIModel;

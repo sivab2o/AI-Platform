@@ -12,7 +12,6 @@ const handleMessage = async (req, res) => {
         const from = req.body.From;
         const text = req.body.Body;
 
-        console.log(`📱 WhatsApp from ${from}: ${text}`);
 
         // ✅ Get training data for user id 1 (your account)
         AIModel.getTrainingData(1, async (err, results) => {
@@ -54,10 +53,7 @@ STRICT RULES:
 
                 // ✅ Save conversation to DB
                 AIModel.saveWhatsappChat(1, from, text, reply, (err2) => {
-                    if (err2) console.log('Save error:', err2);
                 });
-
-                console.log(`✅ Reply sent to ${from}`);
 
             } catch (error) {
                 console.error('AI error:', error);

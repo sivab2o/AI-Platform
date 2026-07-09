@@ -8,11 +8,9 @@ const { log } = require('node:console');
 // Controller for user registration (signup)
 const signup = (req, res) => {
 
-  console.log("yes");
 
   const { name, email, mobile, password } = req.body;
 
-  console.log(req.body);
 
 
   // Check if user already exists
@@ -36,7 +34,6 @@ const signup = (req, res) => {
 const login = (req, res) => {
   const { email, password } = req.body;
 
-  console.log(req.body);
 
 
   // Check if user exists

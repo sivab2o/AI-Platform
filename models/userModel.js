@@ -13,7 +13,6 @@ const User = {
 createUser: (name, email, mobile, password, callback) => {
   bcrypt.hash(password, 10, (err, hashedPassword) => {
     if (err) {
-      console.log(err);
       return callback(err);
     }
 

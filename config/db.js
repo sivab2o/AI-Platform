@@ -1,12 +1,30 @@
-const mysql = require('mysql2');
+// const mysql = require('mysql2');
 
-// const db = mysql.createConnection({
+// const db = mysql.createPool({
 //   host: 'localhost',
 //   user: 'u201043032_ai_admin',
-//   password: 'YOUR_HOSTINGER_PASSWORD',
-//   database: 'u201043032_ai_employee_platform'
+//   password: 'Ai_platform@123',
+//   database: 'u201043032_ai_platform',
+//   waitForConnections: true,
+//   connectionLimit: 10,
+//   queueLimit: 0
 // });
 
+// db.getConnection((err, connection) => {
+//   if (err) {
+//     console.error('Database connection failed: ' + err.stack);
+//     return;
+//   }
+//   console.log('Connected to VPS MySQL Database (pool)');
+//   connection.release();
+// });
+
+// module.exports = db;
+
+
+const mysql = require('mysql2');
+
+// ✅ Local MySQL credentials
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
@@ -19,8 +37,6 @@ db.connect(err => {
     console.error('Database connection failed: ' + err.stack);
     return;
   }
-
-  console.log('Connected to MySQL Database');
 });
 
 module.exports = db;

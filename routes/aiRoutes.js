@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
-const { getDashboardStats, trainAI, saveMasterAI, getTraining, chatWithAI, updateLang, getLang, getConversations, registerGuest, guestChat, checkOwner, checkGuest, getGuestConversationsByGuestId, getAISuggestions, getClients, getQuestions, saveQuestion, updateQuestion, deleteQuestion, guestWelcome, extractFileText, fetchWebsiteContent} = require('../controllers/aiController.js');
+const { getDashboardStats, trainAI, saveMasterAI, getTraining, chatWithAI, updateLang, getLang, getConversations, registerGuest, guestChat, checkOwner, checkGuest, getGuestConversationsByGuestId, getAISuggestions, getClients, getQuestions, saveQuestion, updateQuestion, deleteQuestion, guestWelcome, extractFileText, fetchWebsiteContent, whisperTranscribe, textToSpeech } = require('../controllers/aiController.js');
 const { translateText } = require('../controllers/translateController.js');
 
 router.get('/dashboard/stats/:userId', getDashboardStats);
@@ -29,5 +29,7 @@ router.delete('/questions/:id', deleteQuestion);
 router.post('/guest/welcome', guestWelcome);
 router.post('/extract-file', upload.single('file'), extractFileText);
 router.post('/fetch-url', fetchWebsiteContent);
+router.post('/guest/whisper', upload.single('audio'), whisperTranscribe);
+router.post('/tts', textToSpeech);
 
 module.exports = router;
