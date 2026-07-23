@@ -14,11 +14,80 @@ const AIModel = {
 
     saveTraining: (data, callback) => {
         const sql = `
-            INSERT INTO ai_training (user_id, name, email, mobile, training_data)
-            VALUES (?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE training_data = VALUES(training_data)
-        `;
-        db.query(sql, [data.userId, data.name, data.email, data.mobile, data.trainingData], callback);
+        INSERT INTO ai_training (user_id, name, email, mobile, training_data)
+        VALUES (?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE training_data = VALUES(training_data)
+    `;
+
+        db.query(
+            sql,
+            [
+                data.userId,
+                data.name,
+                data.email,
+                data.mobile,
+                data.trainingData
+            ],
+            callback
+        );
+    },
+
+    saveBusinessEmailSettings: (data, callback) => {
+
+        const businessEmail = String(
+            data.businessEmail || ''
+        )
+            .trim()
+            .toLowerCase();
+
+        const businessAppPassword = String(
+            data.businessAppPassword || ''
+        )
+            .replace(/\s+/g, '')
+            .trim();
+
+        const sql = `
+        INSERT INTO business_email_settings
+        (
+            user_id,
+            business_email,
+            app_password
+        )
+        VALUES (?, ?, ?)
+
+        ON DUPLICATE KEY UPDATE
+            business_email = VALUES(business_email),
+            app_password = VALUES(app_password),
+            updated_at = CURRENT_TIMESTAMP
+    `;
+
+        db.query(
+            sql,
+            [
+                data.userId,
+                businessEmail,
+                businessAppPassword
+            ],
+            callback
+        );
+    },
+
+    getBusinessEmailSettings: (userId, callback) => {
+
+        const sql = `
+        SELECT
+            business_email,
+            app_password
+        FROM business_email_settings
+        WHERE user_id = ?
+        LIMIT 1
+    `;
+
+        db.query(
+            sql,
+            [userId],
+            callback
+        );
     },
 
     saveMasterTraining: (userId, masterData, callback) => {

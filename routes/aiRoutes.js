@@ -3,11 +3,12 @@ const router = express.Router();
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
-const { getDashboardStats, trainAI, saveMasterAI, getTraining, chatWithAI, updateLang, getLang, getConversations, registerGuest, guestChat, checkOwner, checkGuest, getGuestConversationsByGuestId, getAISuggestions, getClients, getQuestions, saveQuestion, updateQuestion, deleteQuestion, guestWelcome, extractFileText, fetchWebsiteContent, whisperTranscribe, textToSpeech } = require('../controllers/aiController.js');
+const { getDashboardStats, trainAI, saveMasterAI, getTraining, chatWithAI, updateLang, getLang, getConversations, registerGuest, guestChat, checkOwner, checkGuest, getGuestConversationsByGuestId, getAISuggestions, getClients, getQuestions, saveQuestion, updateQuestion, deleteQuestion, guestWelcome, extractFileText, fetchWebsiteContent, whisperTranscribe, textToSpeech, testBusinessEmailConnection } = require('../controllers/aiController.js');
 const { translateText } = require('../controllers/translateController.js');
 
 router.get('/dashboard/stats/:userId', getDashboardStats);
 router.post('/train', trainAI);
+router.post('/test-business-email', testBusinessEmailConnection);
 router.post('/train/master', saveMasterAI);
 router.get('/train/:userId', getTraining);
 router.post('/chat', chatWithAI);
