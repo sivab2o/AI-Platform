@@ -68,10 +68,9 @@
 
 /* Cards */
 .cards {
-  display: flex;
-  gap: 20px;
-  margin-top: 20px;
-  flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
 }
 
 .card {
@@ -81,9 +80,9 @@
   border-radius: 10px;
 }
 
-.card .hot {
-  color: red;
-}
+.lead-hot-text { color: #dc2626; font-weight: 700; }
+.lead-warm-text { color: #d97706; font-weight: 700; }
+.lead-cold-text { color: #2563eb; font-weight: 700; }
 
 /* AI Setup Box */
 .ai-setup {
@@ -1132,10 +1131,6 @@
   text-decoration: underline;
 }
 
-.card .cold {
-  color: #1e88e5;
-}
-
 /* ✅ Section Steps */
 .section-steps {
   display: flex;
@@ -1899,4 +1894,17 @@
 
 .q-time-select:focus {
     border-color: #DD1977;
+}
+
+.section-questions {
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+}
+
+.q-field {
+    background:white;
+    padding:18px;
+    border-radius:10px;
+    border:1px solid #eee;
 }

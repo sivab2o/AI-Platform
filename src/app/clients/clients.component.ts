@@ -31,9 +31,16 @@ export class ClientsComponent implements OnInit {
     }
   }
 
+ getLeadType(score: number | undefined): string {
+    const s = score || 0;
+    if (s >= 8) return 'Hot';
+    if (s >= 5) return 'Warm';
+    return 'Cold';
+  }
+
   loadClients() {
     this.isLoading = true;
-    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/clients/${this.user.user_id}`)
+    axios.get(`http://localhost:3000/api/ai/clients/${this.user.user_id}`)
       .then(res => {
         this.clients = res.data;
         this.filteredClients = res.data;
@@ -51,7 +58,8 @@ export class ClientsComponent implements OnInit {
     const text = this.searchText.toLowerCase();
     this.filteredClients = this.clients.filter(c =>
       c.name?.toLowerCase().includes(text) ||
-      c.mobile?.includes(text)
+      c.mobile?.includes(text) ||
+      this.getLeadType(c.interest_score).toLowerCase().includes(text)
     );
   }
 

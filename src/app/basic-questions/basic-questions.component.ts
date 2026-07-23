@@ -42,7 +42,7 @@ export class BasicQuestionsComponent implements OnInit {
 
   loadQuestions() {
     this.isLoading = true;
-    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/questions/${this.user.user_id}`)
+    axios.get(`http://localhost:3000/api/ai/questions/${this.user.user_id}`)
       .then(res => {
         this.questions = res.data;
         this.isLoading = false;
@@ -118,7 +118,7 @@ export class BasicQuestionsComponent implements OnInit {
     };
 
     if (this.isEditing && this.editId) {
-      axios.put(`https://aiemployeeplatform.leadsfactory.info/api/ai/questions/${this.editId}`, data)
+      axios.put(`http://localhost:3000/api/ai/questions/${this.editId}`, data)
         .then(() => {
           this.showForm = false;
           this.loadQuestions();
@@ -126,7 +126,7 @@ export class BasicQuestionsComponent implements OnInit {
         })
         .catch(() => alert('❌ Failed to update'));
     } else {
-      axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/questions', data)
+      axios.post('http://localhost:3000/api/ai/questions', data)
         .then(() => {
           this.showForm = false;
           this.loadQuestions();
@@ -146,7 +146,7 @@ export class BasicQuestionsComponent implements OnInit {
       confirmButtonText: 'Yes, delete!'
     }).then(result => {
       if (result.isConfirmed) {
-        axios.delete(`https://aiemployeeplatform.leadsfactory.info/api/ai/questions/${id}`)
+        axios.delete(`http://localhost:3000/api/ai/questions/${id}`)
           .then(() => {
             this.loadQuestions();
             Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1000, showConfirmButton: false, confirmButtonColor: '#DD1977' });

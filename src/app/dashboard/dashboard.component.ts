@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef, ViewChild, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import axios from 'axios';
@@ -45,6 +46,12 @@ export class DashboardComponent implements OnInit {
   totalClients: number = 0;
   hotConversations: number = 0;
   coldConversations: number = 0;
+  leadHot: number = 0;
+  leadWarm: number = 0;
+  leadCold: number = 0;
+  isEmailVerifying = false;
+  emailVerified = false;
+  emailError = '';
   isCKExpanded: boolean = false;
   ckEditorInstance: any = null;
   ckEditorFullscreen: any = null;
@@ -101,6 +108,7 @@ export class DashboardComponent implements OnInit {
   }
 
   constructor(
+    private http: HttpClient,
     private router: Router,
     private cdr: ChangeDetectorRef,
     private langService: LanguageService,
@@ -130,6 +138,7 @@ export class DashboardComponent implements OnInit {
     return Math.round(((this.currentSectionIndex + 1) / this.sections.length) * 100);
   }
 
+  
   isCheckboxSelected(q: TrainingQuestion, opt: string): boolean {
     return Array.isArray(q.value) && q.value.includes(opt);
   }
@@ -148,6 +157,89 @@ export class DashboardComponent implements OnInit {
         if (q.fieldType === 'checkbox') return Array.isArray(q.value) && q.value.length > 0;
         return q.value !== null && q.value !== undefined && q.value !== '';
       });
+  }
+
+  verifyBusinessEmail(q: any) {
+
+  const emailQuestion = this.questions.find(
+    x => x.id === 'business_email'
+  );
+
+  const passwordQuestion = this.questions.find(
+    x => x.id === 'business_app_password'
+  );
+
+
+  if (!emailQuestion?.value || !passwordQuestion?.value) {
+    this.emailError = 'Business Gmail and App Password are required';
+    this.emailVerified = false;
+    return;
+  }
+
+
+  this.isEmailVerifying = true;
+  this.emailError = '';
+
+
+  this.http.post<any>(
+    'http://localhost:3000/api/verify-business-email',
+    {
+      email: emailQuestion.value,
+      password: passwordQuestion.value
+    }
+  )
+  .subscribe({
+
+    next:(res:any)=>{
+
+      this.isEmailVerifying = false;
+
+      if(res.success){
+
+        this.emailVerified = true;
+        this.emailError = '';
+
+      }else{
+
+        this.emailVerified = false;
+        this.emailError =
+        'Invalid Gmail or App Password. Please check Google App Password.';
+
+      }
+
+    },
+
+
+    error:()=>{
+
+      this.isEmailVerifying=false;
+      this.emailVerified=false;
+
+      this.emailError =
+      'Invalid Gmail or App Password. Please check Google App Password.';
+
+    }
+
+  });
+
+}
+
+  isAllQuestionsValid(): boolean {
+
+    return this.questions
+      .filter(q => q.mandatory)
+      .every(q => {
+
+        if (q.fieldType === 'checkbox') {
+          return Array.isArray(q.value) && q.value.length > 0;
+        }
+
+        return q.value !== null &&
+          q.value !== undefined &&
+          q.value !== '';
+
+      });
+
   }
 
   nextSection() {
@@ -267,7 +359,7 @@ export class DashboardComponent implements OnInit {
 
     this.masterTrainingText = (this.masterTrainingText || '') + htmlContent;
 
-    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train/master', {
+    axios.post('http://localhost:3000/api/ai/train/master', {
       userId: this.user.user_id,
       masterData: this.masterTrainingText
     }).then(() => {
@@ -353,7 +445,7 @@ export class DashboardComponent implements OnInit {
     const formData = new FormData();
     formData.append('file', file);
 
-    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/extract-file', formData, {
+    axios.post('http://localhost:3000/api/ai/extract-file', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }).then(res => {
       const text = res.data.text || '';
@@ -387,7 +479,7 @@ export class DashboardComponent implements OnInit {
     this.cdr.detectChanges();
 
     try {
-      const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/fetch-url', {
+      const res = await axios.post('http://localhost:3000/api/ai/fetch-url', {
         url: this.websiteUrl
       });
 
@@ -429,7 +521,7 @@ export class DashboardComponent implements OnInit {
     const formData = new FormData();
     formData.append('file', file);
 
-    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/extract-file', formData, {
+    axios.post('http://localhost:3000/api/ai/extract-file', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }).then(res => {
       const text = res.data.text || '';
@@ -498,7 +590,7 @@ export class DashboardComponent implements OnInit {
 
   loadTrainingData() {
     const userId = this.user?.user_id;
-    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/train/${userId}`)
+    axios.get(`http://localhost:3000/api/ai/train/${userId}`)
       .then(res => {
         if (res.data && res.data.training_data) {
           this.originalTrainingText = res.data.training_data;
@@ -517,12 +609,14 @@ export class DashboardComponent implements OnInit {
 
   loadDashboardStats() {
     const userId = this.user?.user_id;
-    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/dashboard/stats/${userId}`)
+    axios.get(`http://localhost:3000/api/ai/dashboard/stats/${userId}`)
       .then(res => {
         this.totalConversations = res.data.totalConversations;
         this.totalClients = res.data.totalClients;
-        this.hotConversations = res.data.hotConversations;
-        this.coldConversations = res.data.coldConversations;
+        // ✅ Lead type counts (Hot 8-10, Warm 5-7, Cold 1-4)
+        this.leadHot = res.data.leadHot || 0;
+        this.leadWarm = res.data.leadWarm || 0;
+        this.leadCold = res.data.leadCold || 0;
         this.cdr.detectChanges();
       })
       .catch(err => console.error('Stats error:', err));
@@ -552,6 +646,16 @@ export class DashboardComponent implements OnInit {
       { id: 'business_website', section: 'Business Information', question: 'Website / Social Media URL', fieldType: 'url', options: [], mandatory: false, placeholder: 'https://example.com', value: '' },
       { id: 'business_whatsapp', section: 'Business Information', question: 'Business WhatsApp Number', fieldType: 'phone', options: [], mandatory: true, placeholder: 'Example: +91 98765 43210', value: '' },
       { id: 'business_email', section: 'Business Information', question: 'Business Email', fieldType: 'email', options: [], mandatory: false, placeholder: 'info@example.com', value: '' },
+      {
+        id: 'business_app_password',
+        section: 'Business Information',
+        question: 'Google App Password',
+        fieldType: 'password',
+        options: [],
+        mandatory: false,
+        placeholder: 'Enter 16 character Google App Password',
+        value: ''
+      },
 
       // ✅ Working Hours
       { id: 'working_days', section: 'Working Hours', question: 'Working Days', fieldType: 'checkbox', options: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], mandatory: true, placeholder: '', value: [] },
@@ -894,7 +998,10 @@ export class DashboardComponent implements OnInit {
         answer = q.value || '';
       }
       if (answer) {
-        trainingParts.push(`${q.question}: ${answer}`);
+        // Don't save App Password inside AI training data
+        if (q.id !== 'business_app_password') {
+          trainingParts.push(`${q.question}: ${answer}`);
+        }
       }
     });
 
@@ -902,12 +1009,21 @@ export class DashboardComponent implements OnInit {
     this.originalTrainingText = this.trainingText;
     this.showQuestionnaire = false;
 
-    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train', {
+    axios.post('http://localhost:3000/api/ai/train', {
+
       userId: this.user.user_id,
       name: this.user.name,
       email: this.user.email,
       mobile: this.user.mobile,
-      trainingData: this.originalTrainingText
+      trainingData: this.originalTrainingText,
+
+      businessEmail:
+        this.questions.find(x => x.id === 'business_email')?.value || '',
+
+      businessAppPassword:
+        (this.questions.find(x => x.id === 'business_app_password')?.value || '')
+          .replace(/\s/g, '')
+
     }).then(() => {
       this.isTrained = true;
       Swal.fire({
@@ -927,11 +1043,35 @@ export class DashboardComponent implements OnInit {
         confirmButtonColor: '#DD1977',
         allowOutsideClick: false
       }).then(() => window.location.reload());
-    }).catch(() => alert('❌ Training failed'));
+    }).catch((err) => {
+
+      console.log('Training Error:', err);
+
+      if (err.response && err.response.data && err.response.data.message) {
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Training Failed',
+          text: err.response.data.message,
+          confirmButtonColor: '#DD1977'
+        });
+
+      } else {
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Training Failed',
+          text: 'Something went wrong. Please try again.',
+          confirmButtonColor: '#DD1977'
+        });
+
+      }
+
+    });
   }
 
   copyLink() {
-    const link = `https://aiemployeeplatform.leadsfactory.info/user/${this.user.user_id}`;
+    const link = `http://localhost:3000/user/${this.user.user_id}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(link).then(() => {
         Swal.fire({ icon: 'success', title: 'Link Copied!', timer: 1000, showConfirmButton: false, confirmButtonColor: '#DD1977' });
@@ -964,7 +1104,7 @@ export class DashboardComponent implements OnInit {
     if (!this.trainingText.trim()) { alert('Please enter training data'); return; }
     const dataToSave = this.trainingText;
     this.originalTrainingText = this.trainingText;
-    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train', {
+    axios.post('http://localhost:3000/api/ai/train', {
       userId: this.user.user_id, name: this.user.name, email: this.user.email,
       mobile: this.user.mobile, trainingData: dataToSave
     }).then(() => {
@@ -981,7 +1121,7 @@ export class DashboardComponent implements OnInit {
     if (!this.masterTrainingText || !this.masterTrainingText.trim()) {
       alert('Please enter master training data'); return;
     }
-    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train/master', {
+    axios.post('http://localhost:3000/api/ai/train/master', {
       userId: this.user.user_id, masterData: this.masterTrainingText
     }).then(() => {
       this.showTrainBox = false;
@@ -1003,7 +1143,7 @@ export class DashboardComponent implements OnInit {
     if (!this.trainingText.trim()) { alert('Please enter training data'); return; }
     this.isExpanded = false;
     this.originalTrainingText = this.trainingText;
-    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train', {
+    axios.post('http://localhost:3000/api/ai/train', {
       userId: this.user.user_id, name: this.user.name, email: this.user.email,
       mobile: this.user.mobile, trainingData: this.trainingText
     }).then(() => {

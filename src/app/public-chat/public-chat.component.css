@@ -531,7 +531,7 @@
     padding: 30px 24px;
     width: 100%;
     max-width: 420px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     text-align: center;
 }
 
@@ -962,13 +962,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 7px;
     height: 26px;
-    min-width: 180px;
+    min-width: 300px;
 }
 
 .wave-bars .bar {
-    width: 5px;
+    width: 6px;
     background: #22c55e;
     border-radius: 3px;
     transition: height 0.08s ease;
@@ -998,11 +998,25 @@
 }
 
 @keyframes pulseRing {
-    0% { transform: scale(0.7); opacity: 1; }
-    100% { transform: scale(1.9); opacity: 0; }
+    0% {
+        transform: scale(0.7);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1.9);
+        opacity: 0;
+    }
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

@@ -26,7 +26,6 @@
             </div>
         </div>
 
-        <!-- Cards -->
         <div class="cards">
             <div class="card">
                 <h4>Total Conversations</h4>
@@ -37,20 +36,25 @@
                 <p>{{ totalClients }}</p>
             </div>
             <div class="card">
-                <h4>Hot Conversations</h4>
-                <p class="hot">{{ hotConversations }}</p>
+                <h4>🔥 Hot</h4>
+                <p class="lead-hot-text">{{ leadHot }}</p>
             </div>
             <div class="card">
-                <h4>Cold Conversations</h4>
-                <p class="cold">{{ coldConversations }}</p>
+                <h4>🌤️ Warm</h4>
+                <p class="lead-warm-text">{{ leadWarm }}</p>
+            </div>
+            <div class="card">
+                <h4>❄️ Cold</h4>
+                <p class="lead-cold-text">{{ leadCold }}</p>
             </div>
         </div>
+
 
         <!-- ✅ Show link after trained -->
         <div class="your-link-banner" *ngIf="isTrained && !showQuestionnaire && !showTrainBox">
             <span>🔗 Your shareable link:</span>
-            <a [href]="'https://aiemployeeplatform.leadsfactory.info/user/' + user?.user_id" target="_blank">
-                https://aiemployeeplatform.leadsfactory.info/{{ user?.user_id }}
+            <a [href]="'http://localhost:4200/user/' + user?.user_id" target="_blank">
+                http://localhost:4200/{{ user?.user_id }}
             </a>
             <button class="copy-btn" (click)="copyLink()">📋 Copy</button>
         </div>
@@ -84,311 +88,326 @@
                     <button class="btn-close-q" (click)="goBackToDashboard()">✕</button>
                 </div>
 
-                <!-- Section Steps -->
-                <div class="section-steps">
-                    <div class="section-step" *ngFor="let sec of sections; let i = index"
-                        [class.active]="i === currentSectionIndex" [class.done]="i < currentSectionIndex" [title]="sec">
-                        {{ i + 1 }}
-                    </div>
-                </div>
-
                 <div class="section-title">
-                    <h4>{{ sections[currentSectionIndex] }}</h4>
-                    <span class="section-count">Step {{ currentSectionIndex + 1 }} of {{ totalSections }}</span>
+                    <h4>AI Employee Setup</h4>
                 </div>
 
-                <div class="q-progress-bar">
-                    <div class="q-progress-fill" [style.width.%]="sectionProgressPercent()"></div>
-                </div>
-            </div>
 
-            <!-- Questions for current section -->
-            <div class="section-questions">
-                <div class="q-field" *ngFor="let q of currentSectionQuestions">
-                    <label class="q-label">
-                        {{ q.question }}
-                        <span class="mandatory-star" *ngIf="q.mandatory">*</span>
-                        <span class="optional-tag" *ngIf="!q.mandatory">Optional</span>
-                    </label>
-
-                    <!-- Text / Phone / URL / Email -->
-                    <input
-                        *ngIf="q.fieldType === 'text' || q.fieldType === 'phone' || q.fieldType === 'url' || q.fieldType === 'email'"
-                        [type]="q.fieldType === 'email' ? 'email' : q.fieldType === 'phone' ? 'tel' : q.fieldType === 'url' ? 'url' : 'text'"
-                        [(ngModel)]="q.value" [placeholder]="q.placeholder" class="q-input" />
-
-                    <!-- Textarea -->
-                    <textarea *ngIf="q.fieldType === 'textarea'" [(ngModel)]="q.value" [placeholder]="q.placeholder"
-                        class="q-textarea" rows="3"></textarea>
-
-                    <!-- Office Opening Time -->
-                    <div *ngIf="q.fieldType === 'time'" class="q-time-group">
-                        <select [(ngModel)]="q.valueHour" (ngModelChange)="updateTimeValue(q)" class="q-time-select">
-                            <option *ngFor="let h of hourOptions" [value]="h">{{ h }}</option>
-                        </select>
-                        :
-                        <select [(ngModel)]="q.valueMinute" (ngModelChange)="updateTimeValue(q)" class="q-time-select">
-                            <option *ngFor="let m of minuteOptions" [value]="m">{{ m }}</option>
-                        </select>
-                        <select [(ngModel)]="q.valueAmPm" (ngModelChange)="updateTimeValue(q)" class="q-time-select">
-                            <option value="AM">AM</option>
-                            <option value="PM">PM</option>
-                        </select>
-                    </div>
-
-                    <!-- Radio -->
-                    <div *ngIf="q.fieldType === 'radio'" class="q-radio-group">
-                        <label *ngFor="let opt of q.options" class="radio-option">
-                            <input type="radio" [name]="q.id" [value]="opt" [(ngModel)]="q.value" />
-                            {{ opt }}
+                <!-- Questions for current section -->
+                <div class="section-questions">
+                    <div class="q-field" *ngFor="let q of questions">
+                        <label class="q-label">
+                            {{ q.question }}
+                            <span class="mandatory-star" *ngIf="q.mandatory">*</span>
+                            <span class="optional-tag" *ngIf="!q.mandatory">Optional</span>
                         </label>
-                    </div>
 
-                    <!-- Yes/No -->
-                    <div *ngIf="q.fieldType === 'yes_no'" class="q-yes-no">
-                        <button type="button" [class.selected]="q.value === 'Yes'" (click)="q.value = 'Yes'">✅
-                            Yes</button>
-                        <button type="button" [class.selected]="q.value === 'No'" (click)="q.value = 'No'">❌ No</button>
-                    </div>
+                        <!-- Text / Phone / URL / Email -->
+                        <input *ngIf="q.fieldType === 'text' || 
+                        q.fieldType === 'phone' || 
+                        q.fieldType === 'url' || 
+                        q.fieldType === 'email' || 
+                        q.fieldType === 'password'" [type]="
+                        q.fieldType === 'email'
+                        ? 'email'
+                        : q.fieldType === 'phone'
+                        ? 'tel'
+                        : q.fieldType === 'url'
+                        ? 'url'
+                        : q.fieldType === 'password'
+                        ? 'password'
+                        : 'text'
+                    " [(ngModel)]="q.value" [placeholder]="q.placeholder"
+                            (change)="q.id === 'business_app_password' ? verifyBusinessEmail(q) : null"
+                            class="q-input" />
 
-                    <!-- Dropdown -->
-                    <select *ngIf="q.fieldType === 'dropdown'" [(ngModel)]="q.value" class="q-select">
-                        <option value="">-- Select --</option>
-                        <option *ngFor="let opt of q.options" [value]="opt">{{ opt }}</option>
-                    </select>
+                        <small *ngIf="q.id === 'business_app_password' && emailError"
+                            style="color:red;display:block;margin-top:8px;">
+                            ❌ {{emailError}}
+                        </small>
 
-                    <!-- Checkbox -->
-                    <div *ngIf="q.fieldType === 'checkbox'" class="q-checkbox-group">
-                        <label class="checkbox-option select-all-option">
-                            <input type="checkbox" [checked]="isAllSelected(q)" (change)="toggleSelectAll(q)" />
-                            <strong>Select All</strong>
-                        </label>
-                        <label *ngFor="let opt of q.options" class="checkbox-option">
-                            <input type="checkbox" [checked]="isCheckboxSelected(q, opt)"
-                                (change)="toggleCheckbox(q, opt)" />
-                            {{ opt }}
-                        </label>
-                    </div>
+                        <small *ngIf="q.id === 'business_app_password' && emailVerified"
+                            style="color:green;display:block;margin-top:8px;">
+                            ✅ Gmail verified successfully
+                        </small>
 
-                </div>
-            </div>
+                        <!-- Textarea -->
+                        <textarea *ngIf="q.fieldType === 'textarea'" [(ngModel)]="q.value" [placeholder]="q.placeholder"
+                            class="q-textarea" rows="3"></textarea>
 
-            <!-- Navigation -->
-            <div class="q-nav">
-                <button class="btn-prev" (click)="prevSection()" [disabled]="currentSectionIndex === 0">
-                    ← Previous
-                </button>
-                <button class="btn-next" *ngIf="currentSectionIndex < sections.length - 1" (click)="nextSection()"
-                    [disabled]="!isSectionValid()">
-                    Next →
-                </button>
-                <button class="btn-finish" *ngIf="currentSectionIndex === sections.length - 1"
-                    (click)="finishQuestionnaire()" [disabled]="!isSectionValid()">
-                    ✅ Finish & Save
-                </button>
-            </div>
-
-        </div>
-
-        <!-- STEP 2: Master AI Box -->
-        <div class="ai-setup" *ngIf="showTrainBox">
-            <div class="train-header">
-                <div>
-                    <h3>⚡ Master AI Employee</h3>
-                    <p class="master-sub">Add extra details, instructions or custom knowledge for your AI</p>
-                </div>
-                <div class="train-header-right">
-                    <button type="button" class="btn-redo" (click)="goBackToDashboard()">← Back</button>
-                </div>
-            </div>
-
-            <!-- ✅ Link banner -->
-            <div class="link-banner">
-                <span>🔗 Your link:</span>
-                <a [href]="'https://aiemployeeplatform.leadsfactory.info/user/' + user?.user_id" target="_blank">
-                    'https://aiemployeeplatform.leadsfactory.info/user/{{ user?.user_id }}
-                </a>
-                <button type="button" class="copy-btn" (click)="copyLink()">📋 Copy</button>
-            </div>
-
-            <!-- ✅ STEP 2A: Training Type Selector -->
-            <div class="master-type-selector" *ngIf="!masterTrainingType">
-                <p class="master-type-title">How would you like to train your Master AI?</p>
-                <div class="master-type-cards">
-                    <div class="master-type-card" (click)="selectMasterType('qa')">
-                        <div class="master-type-icon">💬</div>
-                        <div class="master-type-label">Q &amp; A</div>
-                        <div class="master-type-desc">Type questions and answers manually</div>
-                    </div>
-                    <div class="master-type-card" (click)="selectMasterType('file')">
-                        <div class="master-type-icon">📄</div>
-                        <div class="master-type-label">Upload File</div>
-                        <div class="master-type-desc">PDF, Excel, DOCX, TXT files</div>
-                    </div>
-                    <div class="master-type-card" (click)="selectMasterType('url')">
-                        <div class="master-type-icon">🌐</div>
-                        <div class="master-type-label">Website URL</div>
-                        <div class="master-type-desc">Paste your website link to auto-read content</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ✅ STEP 2B: Q&A -->
-            <div *ngIf="masterTrainingType === 'qa'">
-                <div class="master-type-back">
-                    <button type="button" class="btn-change-type" (click)="changeMasterType()">← Change Method</button>
-                    <span class="master-type-badge">💬 Q &amp; A Mode</span>
-                </div>
-
-                <div class="qa-list">
-                    <div class="qa-item" *ngFor="let qa of qaPairs; let i = index">
-                        <div class="qa-number">{{ i + 1 }}</div>
-                        <div class="qa-fields">
-                            <input type="text" [(ngModel)]="qa.question" (ngModelChange)="triggerDetect()"
-                                placeholder="Question — e.g. What is your pricing?" class="qa-input qa-question" />
-                            <textarea [(ngModel)]="qa.answer" (ngModelChange)="triggerDetect()"
-                                placeholder="Answer — e.g. Our basic plan starts from Rs. 5,000"
-                                class="qa-textarea qa-answer" rows="2"></textarea>
+                        <!-- Office Opening Time -->
+                        <div *ngIf="q.fieldType === 'time'" class="q-time-group">
+                            <select [(ngModel)]="q.valueHour" (ngModelChange)="updateTimeValue(q)"
+                                class="q-time-select">
+                                <option *ngFor="let h of hourOptions" [value]="h">{{ h }}</option>
+                            </select>
+                            :
+                            <select [(ngModel)]="q.valueMinute" (ngModelChange)="updateTimeValue(q)"
+                                class="q-time-select">
+                                <option *ngFor="let m of minuteOptions" [value]="m">{{ m }}</option>
+                            </select>
+                            <select [(ngModel)]="q.valueAmPm" (ngModelChange)="updateTimeValue(q)"
+                                class="q-time-select">
+                                <option value="AM">AM</option>
+                                <option value="PM">PM</option>
+                            </select>
                         </div>
-                        <button type="button" class="qa-remove-btn" (click)="removeQAPair(i)"
-                            *ngIf="qaPairs.length > 1">✕</button>
+
+                        <!-- Radio -->
+                        <div *ngIf="q.fieldType === 'radio'" class="q-radio-group">
+                            <label *ngFor="let opt of q.options" class="radio-option">
+                                <input type="radio" [name]="q.id" [value]="opt" [(ngModel)]="q.value" />
+                                {{ opt }}
+                            </label>
+                        </div>
+
+                        <!-- Yes/No -->
+                        <div *ngIf="q.fieldType === 'yes_no'" class="q-yes-no">
+                            <button type="button" [class.selected]="q.value === 'Yes'" (click)="q.value = 'Yes'">✅
+                                Yes</button>
+                            <button type="button" [class.selected]="q.value === 'No'" (click)="q.value = 'No'">❌
+                                No</button>
+                        </div>
+
+                        <!-- Dropdown -->
+                        <select *ngIf="q.fieldType === 'dropdown'" [(ngModel)]="q.value" class="q-select">
+                            <option value="">-- Select --</option>
+                            <option *ngFor="let opt of q.options" [value]="opt">{{ opt }}</option>
+                        </select>
+
+                        <!-- Checkbox -->
+                        <div *ngIf="q.fieldType === 'checkbox'" class="q-checkbox-group">
+                            <label class="checkbox-option select-all-option">
+                                <input type="checkbox" [checked]="isAllSelected(q)" (change)="toggleSelectAll(q)" />
+                                <strong>Select All</strong>
+                            </label>
+                            <label *ngFor="let opt of q.options" class="checkbox-option">
+                                <input type="checkbox" [checked]="isCheckboxSelected(q, opt)"
+                                    (change)="toggleCheckbox(q, opt)" />
+                                {{ opt }}
+                            </label>
+                        </div>
+
                     </div>
                 </div>
 
-                <button type="button" class="btn-add-qa" (click)="addQAPair()">
-                    + Add Another Q&amp;A
-                </button>
-
-                <!-- ✅ Existing saved master data preview -->
-                <div class="extracted-preview" *ngIf="masterTrainingText">
-                    <div class="extracted-header">
-                        <span>📝 Existing Master AI Data</span>
-                        <button type="button" class="btn-clear-extracted" (click)="clearMasterText()">🗑 Clear</button>
-                    </div>
-                    <div class="extracted-content" [innerHTML]="masterTrainingText"></div>
+                <div class="q-nav">
+                    <button class="btn-finish" (click)="finishQuestionnaire()" [disabled]="!isAllQuestionsValid()">
+                        ✅ Finish & Save
+                    </button>
                 </div>
 
-                <!-- ✅ New Q&A being typed preview -->
-                <div class="extracted-preview" *ngIf="filledQAPairs.length > 0">
-                    <div class="extracted-header">
-                        <span>📝 New Q&amp;A Preview</span>
-                        <span class="qa-preview-count">{{ filledQAPairs.length }} Q&amp;A added</span>
+            </div>
+
+            <!-- STEP 2: Master AI Box -->
+            <div class="ai-setup" *ngIf="showTrainBox">
+                <div class="train-header">
+                    <div>
+                        <h3>⚡ Master AI Employee</h3>
+                        <p class="master-sub">Add extra details, instructions or custom knowledge for your AI</p>
                     </div>
-                    <div class="extracted-content">
-                        <div class="qa-preview-item" *ngFor="let qa of filledQAPairs; let i = index">
-                            <p class="qa-preview-q"><strong>Q{{ i + 1 }}: {{ qa.question }}</strong></p>
-                            <p class="qa-preview-a">A: {{ qa.answer }}</p>
+                    <div class="train-header-right">
+                        <button type="button" class="btn-redo" (click)="goBackToDashboard()">← Back</button>
+                    </div>
+                </div>
+
+                <!-- ✅ Link banner -->
+                <div class="link-banner">
+                    <span>🔗 Your link:</span>
+                    <a [href]="'http://localhost:4200/user/' + user?.user_id" target="_blank">
+                        'http://localhost:4200/user/{{ user?.user_id }}
+                    </a>
+                    <button type="button" class="copy-btn" (click)="copyLink()">📋 Copy</button>
+                </div>
+
+                <!-- ✅ STEP 2A: Training Type Selector -->
+                <div class="master-type-selector" *ngIf="!masterTrainingType">
+                    <p class="master-type-title">How would you like to train your Master AI?</p>
+                    <div class="master-type-cards">
+                        <div class="master-type-card" (click)="selectMasterType('qa')">
+                            <div class="master-type-icon">💬</div>
+                            <div class="master-type-label">Q &amp; A</div>
+                            <div class="master-type-desc">Type questions and answers manually</div>
+                        </div>
+                        <div class="master-type-card" (click)="selectMasterType('file')">
+                            <div class="master-type-icon">📄</div>
+                            <div class="master-type-label">Upload File</div>
+                            <div class="master-type-desc">PDF, Excel, DOCX, TXT files</div>
+                        </div>
+                        <div class="master-type-card" (click)="selectMasterType('url')">
+                            <div class="master-type-icon">🌐</div>
+                            <div class="master-type-label">Website URL</div>
+                            <div class="master-type-desc">Paste your website link to auto-read content</div>
                         </div>
                     </div>
                 </div>
 
-                <button type="button" class="btn-save-master" (click)="saveQAMaster()" [disabled]="!isQAValid()">
-                    💾 Save Master AI
-                </button>
-            </div>
-
-            <!-- ✅ STEP 2C: File Upload -->
-            <div *ngIf="masterTrainingType === 'file'">
-                <div class="master-type-back">
-                    <button type="button" class="btn-change-type" (click)="changeMasterType()">← Change Method</button>
-                    <span class="master-type-badge">📄 File Upload Mode</span>
-                </div>
-
-                <div class="file-drop-zone" (click)="triggerMasterFileUpload()" (dragover)="onDragOver($event)"
-                    (drop)="onFileDrop($event)">
-                    <div class="file-drop-icon">📂</div>
-                    <p class="file-drop-title">Click to upload or drag &amp; drop</p>
-                    <p class="file-drop-sub">Supports: PDF, Excel, DOCX, TXT, CSV</p>
-                </div>
-
-                <input type="file" #masterFileInput (change)="onMasterFileUpload($event)"
-                    accept=".txt,.doc,.docx,.pdf,.xlsx,.xls,.csv" style="display:none" multiple />
-
-                <div class="uploaded-files-list" *ngIf="masterUploadedFiles.length > 0">
-                    <div class="uploaded-file-item" *ngFor="let f of masterUploadedFiles; let i = index">
-                        <span class="file-icon">📎</span>
-                        <span class="file-name">{{ f.name }}</span>
-                        <span class="file-status" [class.done]="f.done" [class.loading]="f.loading">
-                            {{ f.done ? '✅ Extracted' : f.loading ? '⏳ Processing...' : '⏳ Pending' }}
-                        </span>
-                        <button type="button" class="remove-file-btn" (click)="removeMasterFile(i)">✕</button>
+                <!-- ✅ STEP 2B: Q&A -->
+                <div *ngIf="masterTrainingType === 'qa'">
+                    <div class="master-type-back">
+                        <button type="button" class="btn-change-type" (click)="changeMasterType()">← Change
+                            Method</button>
+                        <span class="master-type-badge">💬 Q &amp; A Mode</span>
                     </div>
-                </div>
 
-                <!-- ✅ Existing saved data -->
-                <div class="extracted-preview" *ngIf="masterTrainingText && !sessionExtractedText">
-                    <div class="extracted-header">
-                        <span>📝 Existing Master AI Data</span>
-                        <button type="button" class="btn-clear-extracted" (click)="clearMasterText()">🗑 Clear</button>
+                    <div class="qa-list">
+                        <div class="qa-item" *ngFor="let qa of qaPairs; let i = index">
+                            <div class="qa-number">{{ i + 1 }}</div>
+                            <div class="qa-fields">
+                                <input type="text" [(ngModel)]="qa.question" (ngModelChange)="triggerDetect()"
+                                    placeholder="Question — e.g. What is your pricing?" class="qa-input qa-question" />
+                                <textarea [(ngModel)]="qa.answer" (ngModelChange)="triggerDetect()"
+                                    placeholder="Answer — e.g. Our basic plan starts from Rs. 5,000"
+                                    class="qa-textarea qa-answer" rows="2"></textarea>
+                            </div>
+                            <button type="button" class="qa-remove-btn" (click)="removeQAPair(i)"
+                                *ngIf="qaPairs.length > 1">✕</button>
+                        </div>
                     </div>
-                    <div class="extracted-content" [innerHTML]="masterTrainingText"></div>
-                </div>
 
-                <!-- ✅ New file extracted preview -->
-                <div class="extracted-preview" *ngIf="sessionExtractedText">
-                    <div class="extracted-header">
-                        <span>📝 Extracted Content Preview</span>
-                        <button type="button" class="btn-clear-extracted" (click)="clearMasterText()">🗑 Clear</button>
+                    <button type="button" class="btn-add-qa" (click)="addQAPair()">
+                        + Add Another Q&amp;A
+                    </button>
+
+                    <!-- ✅ Existing saved master data preview -->
+                    <div class="extracted-preview" *ngIf="masterTrainingText">
+                        <div class="extracted-header">
+                            <span>📝 Existing Master AI Data</span>
+                            <button type="button" class="btn-clear-extracted" (click)="clearMasterText()">🗑
+                                Clear</button>
+                        </div>
+                        <div class="extracted-content" [innerHTML]="masterTrainingText"></div>
                     </div>
-                    <div class="extracted-content" [innerHTML]="sessionExtractedText"></div>
-                </div>
 
-                <button type="button" class="btn-save-master" (click)="saveMasterAI()"
-                    [disabled]="!sessionExtractedText && !masterTrainingText">
-                    💾 Save Master AI
-                </button>
-            </div>
-
-            <!-- ✅ STEP 2D: Website URL -->
-            <div *ngIf="masterTrainingType === 'url'">
-                <div class="master-type-back">
-                    <button type="button" class="btn-change-type" (click)="changeMasterType()">← Change Method</button>
-                    <span class="master-type-badge">🌐 Website URL Mode</span>
-                </div>
-
-                <div class="url-input-box">
-                    <label class="url-label">Enter your website URL</label>
-                    <div class="url-input-row">
-                        <input type="url" [(ngModel)]="websiteUrl" placeholder="https://example.com"
-                            class="url-input" />
-                        <button type="button" class="btn-fetch-url" (click)="fetchWebsiteContent()"
-                            [disabled]="isFetchingUrl || !websiteUrl">
-                            {{ isFetchingUrl ? '⏳ Fetching...' : '🔍 Fetch Content' }}
-                        </button>
+                    <!-- ✅ New Q&A being typed preview -->
+                    <div class="extracted-preview" *ngIf="filledQAPairs.length > 0">
+                        <div class="extracted-header">
+                            <span>📝 New Q&amp;A Preview</span>
+                            <span class="qa-preview-count">{{ filledQAPairs.length }} Q&amp;A added</span>
+                        </div>
+                        <div class="extracted-content">
+                            <div class="qa-preview-item" *ngFor="let qa of filledQAPairs; let i = index">
+                                <p class="qa-preview-q"><strong>Q{{ i + 1 }}: {{ qa.question }}</strong></p>
+                                <p class="qa-preview-a">A: {{ qa.answer }}</p>
+                            </div>
+                        </div>
                     </div>
-                    <p class="url-hint">💡 We will automatically read the content from your website and train the AI</p>
+
+                    <button type="button" class="btn-save-master" (click)="saveQAMaster()" [disabled]="!isQAValid()">
+                        💾 Save Master AI
+                    </button>
                 </div>
 
-                <div class="fetch-status" *ngIf="isFetchingUrl">
-                    <div class="spinner"></div>
-                    <p>Reading website content... please wait</p>
-                </div>
-
-                <!-- ✅ Existing saved data -->
-                <div class="extracted-preview" *ngIf="masterTrainingText && !sessionExtractedText && !isFetchingUrl">
-                    <div class="extracted-header">
-                        <span>📝 Existing Master AI Data</span>
-                        <button type="button" class="btn-clear-extracted" (click)="clearMasterText()">🗑 Clear</button>
+                <!-- ✅ STEP 2C: File Upload -->
+                <div *ngIf="masterTrainingType === 'file'">
+                    <div class="master-type-back">
+                        <button type="button" class="btn-change-type" (click)="changeMasterType()">← Change
+                            Method</button>
+                        <span class="master-type-badge">📄 File Upload Mode</span>
                     </div>
-                    <div class="extracted-content" [innerHTML]="masterTrainingText"></div>
-                </div>
 
-                <!-- ✅ New fetched preview -->
-                <div class="extracted-preview" *ngIf="sessionExtractedText && !isFetchingUrl">
-                    <div class="extracted-header">
-                        <span>📝 Content Fetched from Website</span>
-                        <button type="button" class="btn-clear-extracted" (click)="clearMasterText()">🗑 Clear</button>
+                    <div class="file-drop-zone" (click)="triggerMasterFileUpload()" (dragover)="onDragOver($event)"
+                        (drop)="onFileDrop($event)">
+                        <div class="file-drop-icon">📂</div>
+                        <p class="file-drop-title">Click to upload or drag &amp; drop</p>
+                        <p class="file-drop-sub">Supports: PDF, Excel, DOCX, TXT, CSV</p>
                     </div>
-                    <div class="extracted-content" [innerHTML]="sessionExtractedText"></div>
+
+                    <input type="file" #masterFileInput (change)="onMasterFileUpload($event)"
+                        accept=".txt,.doc,.docx,.pdf,.xlsx,.xls,.csv" style="display:none" multiple />
+
+                    <div class="uploaded-files-list" *ngIf="masterUploadedFiles.length > 0">
+                        <div class="uploaded-file-item" *ngFor="let f of masterUploadedFiles; let i = index">
+                            <span class="file-icon">📎</span>
+                            <span class="file-name">{{ f.name }}</span>
+                            <span class="file-status" [class.done]="f.done" [class.loading]="f.loading">
+                                {{ f.done ? '✅ Extracted' : f.loading ? '⏳ Processing...' : '⏳ Pending' }}
+                            </span>
+                            <button type="button" class="remove-file-btn" (click)="removeMasterFile(i)">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- ✅ Existing saved data -->
+                    <div class="extracted-preview" *ngIf="masterTrainingText && !sessionExtractedText">
+                        <div class="extracted-header">
+                            <span>📝 Existing Master AI Data</span>
+                            <button type="button" class="btn-clear-extracted" (click)="clearMasterText()">🗑
+                                Clear</button>
+                        </div>
+                        <div class="extracted-content" [innerHTML]="masterTrainingText"></div>
+                    </div>
+
+                    <!-- ✅ New file extracted preview -->
+                    <div class="extracted-preview" *ngIf="sessionExtractedText">
+                        <div class="extracted-header">
+                            <span>📝 Extracted Content Preview</span>
+                            <button type="button" class="btn-clear-extracted" (click)="clearMasterText()">🗑
+                                Clear</button>
+                        </div>
+                        <div class="extracted-content" [innerHTML]="sessionExtractedText"></div>
+                    </div>
+
+                    <button type="button" class="btn-save-master" (click)="saveMasterAI()"
+                        [disabled]="!sessionExtractedText && !masterTrainingText">
+                        💾 Save Master AI
+                    </button>
                 </div>
 
-                <button type="button" class="btn-save-master" (click)="saveMasterAI()"
-                    [disabled]="!sessionExtractedText || isFetchingUrl">
-                    💾 Save Master AI
-                </button>
+                <!-- ✅ STEP 2D: Website URL -->
+                <div *ngIf="masterTrainingType === 'url'">
+                    <div class="master-type-back">
+                        <button type="button" class="btn-change-type" (click)="changeMasterType()">← Change
+                            Method</button>
+                        <span class="master-type-badge">🌐 Website URL Mode</span>
+                    </div>
+
+                    <div class="url-input-box">
+                        <label class="url-label">Enter your website URL</label>
+                        <div class="url-input-row">
+                            <input type="url" [(ngModel)]="websiteUrl" placeholder="https://example.com"
+                                class="url-input" />
+                            <button type="button" class="btn-fetch-url" (click)="fetchWebsiteContent()"
+                                [disabled]="isFetchingUrl || !websiteUrl">
+                                {{ isFetchingUrl ? '⏳ Fetching...' : '🔍 Fetch Content' }}
+                            </button>
+                        </div>
+                        <p class="url-hint">💡 We will automatically read the content from your website and train the AI
+                        </p>
+                    </div>
+
+                    <div class="fetch-status" *ngIf="isFetchingUrl">
+                        <div class="spinner"></div>
+                        <p>Reading website content... please wait</p>
+                    </div>
+
+                    <!-- ✅ Existing saved data -->
+                    <div class="extracted-preview"
+                        *ngIf="masterTrainingText && !sessionExtractedText && !isFetchingUrl">
+                        <div class="extracted-header">
+                            <span>📝 Existing Master AI Data</span>
+                            <button type="button" class="btn-clear-extracted" (click)="clearMasterText()">🗑
+                                Clear</button>
+                        </div>
+                        <div class="extracted-content" [innerHTML]="masterTrainingText"></div>
+                    </div>
+
+                    <!-- ✅ New fetched preview -->
+                    <div class="extracted-preview" *ngIf="sessionExtractedText && !isFetchingUrl">
+                        <div class="extracted-header">
+                            <span>📝 Content Fetched from Website</span>
+                            <button type="button" class="btn-clear-extracted" (click)="clearMasterText()">🗑
+                                Clear</button>
+                        </div>
+                        <div class="extracted-content" [innerHTML]="sessionExtractedText"></div>
+                    </div>
+
+                    <button type="button" class="btn-save-master" (click)="saveMasterAI()"
+                        [disabled]="!sessionExtractedText || isFetchingUrl">
+                        💾 Save Master AI
+                    </button>
+                </div>
+
             </div>
 
         </div>
-
     </div>
-</div>

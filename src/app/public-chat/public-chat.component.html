@@ -81,19 +81,21 @@
 
             <!-- ✅ Fix 1: Listening indicator -->
             <!-- ✅ Voice status indicator — listening waves / speaking pulse -->
-          <div class="voice-status" *ngIf="isMicActive && !isTyping && !isSpeaking">
-    <div class="wave-bars">
-        <span class="bar" [style.height.px]="6 + micLevel * 8"></span>
-        <span class="bar" [style.height.px]="6 + micLevel * 14"></span>
-        <span class="bar" [style.height.px]="6 + micLevel * 20"></span>
-        <span class="bar" [style.height.px]="6 + micLevel * 26"></span>
-        <span class="bar" [style.height.px]="6 + micLevel * 30"></span>
-        <span class="bar" [style.height.px]="6 + micLevel * 26"></span>
-        <span class="bar" [style.height.px]="6 + micLevel * 20"></span>
-        <span class="bar" [style.height.px]="6 + micLevel * 14"></span>
-        <span class="bar" [style.height.px]="6 + micLevel * 8"></span>
-    </div>
-</div>
+            <div class="voice-status" *ngIf="isMicActive && !isTyping && !isSpeaking">
+                <div class="wave-bars">
+                    <span class="bar" [style.height.px]="6 + micLevel * 6"></span>
+                    <span class="bar" [style.height.px]="6 + micLevel * 8"></span>
+                    <span class="bar" [style.height.px]="6 + micLevel * 14"></span>
+                    <span class="bar" [style.height.px]="6 + micLevel * 20"></span>
+                    <span class="bar" [style.height.px]="6 + micLevel * 26"></span>
+                    <span class="bar" [style.height.px]="6 + micLevel * 30"></span>
+                    <span class="bar" [style.height.px]="6 + micLevel * 26"></span>
+                    <span class="bar" [style.height.px]="6 + micLevel * 20"></span>
+                    <span class="bar" [style.height.px]="6 + micLevel * 14"></span>
+                    <span class="bar" [style.height.px]="6 + micLevel * 8"></span>
+                    <span class="bar" [style.height.px]="6 + micLevel * 6"></span>
+                </div>
+            </div>
 
             <div class="voice-status speaking" *ngIf="isSpeaking">
                 <div class="speak-pulse">

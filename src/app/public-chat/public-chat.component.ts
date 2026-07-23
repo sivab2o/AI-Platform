@@ -38,12 +38,12 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   showLangSelect: boolean = false;
 
   languages = [
-    { name: 'Tamil',     code: 'tamil',     flag: '🇮🇳', whisper: 'ta' },
-    { name: 'English',   code: 'english',   flag: '🇬🇧', whisper: 'en' },
-    { name: 'Hindi',     code: 'hindi',     flag: '🇮🇳', whisper: 'hi' },
-    { name: 'Telugu',    code: 'telugu',    flag: '🇮🇳', whisper: 'te' },
+    { name: 'Tamil', code: 'tamil', flag: '🇮🇳', whisper: 'ta' },
+    { name: 'English', code: 'english', flag: '🇬🇧', whisper: 'en' },
+    { name: 'Hindi', code: 'hindi', flag: '🇮🇳', whisper: 'hi' },
+    { name: 'Telugu', code: 'telugu', flag: '🇮🇳', whisper: 'te' },
     { name: 'Malayalam', code: 'malayalam', flag: '🇮🇳', whisper: 'ml' },
-    { name: 'Kannada',   code: 'kannada',   flag: '🇮🇳', whisper: 'kn' },
+    { name: 'Kannada', code: 'kannada', flag: '🇮🇳', whisper: 'kn' },
   ];
 
   collectingInfo: boolean = true;
@@ -60,7 +60,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   allSuggestions: string[] = [];
   askedCount: number = 0;
   maxQuickReplies: number = 3;
-  quickRepliesDismissed: boolean = false;
+  quickRepliesDismissed: boolean = true;
 
   // ✅ Voice variables
   isListening: boolean = false;
@@ -83,6 +83,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
 
   private speechEndedAt: number = 0;
   private speechStartedAt: number = 0;
+  private speakingStuckCount: number = 0;
 
   private get MIC_COOLDOWN_MS(): number {
     const speechDuration = this.speechStartedAt > 0
@@ -102,6 +103,9 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
 
   // ✅ Track current playing audio so we can stop it
   private currentAudio: HTMLAudioElement | null = null;
+
+  // ✅ Typewriter: text appears word-by-word while the voice speaks
+  private typingInterval: any = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -149,7 +153,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       };
     }
 
-    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/owner/check/${this.ownerId}`)
+    axios.get(`http://localhost:3000/api/ai/owner/check/${this.ownerId}`)
       .then(res => {
         if (res.data.valid !== true) {
           this.step = 'invalid';
@@ -273,13 +277,13 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   async submitForm() {
 
     try {
-      const checkRes = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/check', {
+      const checkRes = await axios.post('http://localhost:3000/api/ai/guest/check', {
         email: this.guestEmail, mobile: this.guestMobile, ownerId: this.ownerId
       });
 
       if (checkRes.data.exists) {
         this.guestId = checkRes.data.guestId;
-        const convRes = await axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/guest/conversations/${this.guestId}`);
+        const convRes = await axios.get(`http://localhost:3000/api/ai/guest/conversations/${this.guestId}`);
         const data = Array.isArray(convRes.data) ? convRes.data : [];
         if (data.length > 0) {
           data.forEach((c: any) => {
@@ -289,68 +293,66 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
         }
 
         await this.requestMicPermissionOnce();
-         this.startMicWatchdog(); 
+        this.startMicWatchdog();
         this.collectingInfo = false;
         this.cdr.detectChanges();
 
         // ✅ Wait for welcome message first, then start mic after it finishes
         setTimeout(async () => {
           try {
-            const welcomeRes = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/welcome', {
+            const welcomeRes = await axios.post('http://localhost:3000/api/ai/guest/welcome', {
               ownerId: this.ownerId, guestId: this.guestId, guestName: this.guestName, returning: true,
               selectedLanguage: this.selectedLanguageCode
             });
             const welcomeMsg = welcomeRes.data.reply;
             this.stopCurrentAudio();
             this.addBotMessage(welcomeMsg);
-            this.speakReply(welcomeMsg, () => {
-              // ✅ Only start mic AFTER welcome finishes speaking
+            this.speakReply(welcomeMsg, async () => {
+              // ✅ Mic OFF after introduction — user turns it on manually
               this.isSpeaking = false;
-              this.micManuallyStopped = false;
-              setTimeout(() => {
-                if (this.micPermissionGranted && !this.micManuallyStopped) {
-                  this.beginRecognition(true);
-                }
-              }, 500);
-            });
+              this.stopVoiceInput();
+              // ✅ Show PRODUCT buttons AFTER welcome finishes
+              const prods = welcomeRes.data.products || [];
+              if (prods.length) { this.quickReplies = prods; this.showQuickReplies = true; }
+              this.cdr.detectChanges();
+              setTimeout(() => this.scrollToBottom(), 100);
+            }, true);   // ✅ skipVAD = true — no listening during introduction
           } catch (err) { console.error(err); }
-          await this.loadQuickReplies();
           this.cdr.detectChanges();
         }, 300);
 
       } else {
-        const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/register', {
+        const res = await axios.post('http://localhost:3000/api/ai/guest/register', {
           name: this.guestName, email: '', mobile: this.guestMobile, ownerId: this.ownerId
         });
         this.guestId = res.data.guestId;
 
         await this.requestMicPermissionOnce();
-         this.startMicWatchdog(); 
+        this.startMicWatchdog();
         this.collectingInfo = false;
         this.cdr.detectChanges();
 
         // ✅ Wait for welcome message first, then start mic after it finishes
         setTimeout(async () => {
           try {
-            const welcomeRes = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/welcome', {
+            const welcomeRes = await axios.post('http://localhost:3000/api/ai/guest/welcome', {
               ownerId: this.ownerId, guestId: this.guestId, guestName: this.guestName, returning: false,
               selectedLanguage: this.selectedLanguageCode
             });
             const welcomeMsg = welcomeRes.data.reply;
             this.stopCurrentAudio();
             this.addBotMessage(welcomeMsg);
-            this.speakReply(welcomeMsg, () => {
-              // ✅ Only start mic AFTER welcome finishes speaking
+            this.speakReply(welcomeMsg, async () => {
+              // ✅ Mic OFF after introduction — user turns it on manually
               this.isSpeaking = false;
-              this.micManuallyStopped = false;
-              setTimeout(() => {
-                if (this.micPermissionGranted && !this.micManuallyStopped) {
-                  this.beginRecognition(true);
-                }
-              }, 500);
-            });
+              this.stopVoiceInput();
+              // ✅ Show PRODUCT buttons AFTER welcome finishes
+              const prods = welcomeRes.data.products || [];
+              if (prods.length) { this.quickReplies = prods; this.showQuickReplies = true; }
+              this.cdr.detectChanges();
+              setTimeout(() => this.scrollToBottom(), 100);
+            }, true);   // ✅ skipVAD = true — no listening during introduction
           } catch (err) { console.error(err); }
-          await this.loadQuickReplies();
           this.cdr.detectChanges();
         }, 300);
       }
@@ -364,18 +366,31 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   ngAfterViewChecked(): void { }
 
   scrollToBottom(): void {
-    try {
-      if (this.chatMessages) {
-        const el = this.chatMessages.nativeElement;
-        setTimeout(() => { el.scrollTop = el.scrollHeight; }, 50);
-      }
-    } catch (e) { }
+    const doScroll = () => {
+      try {
+        const el = document.querySelector('.chat-messages');
+        if (el) el.scrollTop = el.scrollHeight;
+      } catch (e) { }
+    };
+    doScroll();
+    setTimeout(doScroll, 150);   // ✅ second pass after late-rendering content
   }
 
   formatTime(dateStr: string = ''): string {
     const date = dateStr ? new Date(dateStr) : new Date();
     return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
   }
+
+ private prepareTextForSpeech(text: string): string {
+  return text.replace(
+    /(?:\+91[\s-]?)?\b\d{10}\b/g,
+    (phoneNumber: string) => {
+      const digitsOnly = phoneNumber.replace(/\D/g, '');
+
+      return digitsOnly;
+    }
+  );
+}
 
   addBotMessage(text: string): void {
     this.messages.push({ sender: 'bot', text, time: this.formatTime() });
@@ -389,10 +404,51 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
     this.scrollToBottom();
   }
 
+  // ✅ Typewriter helpers — text fills word-by-word while the voice speaks
+  private beginTypedMessage(): any {
+    const msg = { sender: 'bot', text: '', time: this.formatTime() };
+    this.messages.push(msg);
+    this.cdr.detectChanges();
+    this.scrollToBottom();
+    return msg;
+  }
+
+  private typeChunkIntoMessage(msg: any, chunkText: string, durationMs: number) {
+    this.stopTypewriter();
+    const words = chunkText.split(/\s+/).filter(w => w.length > 0);
+    if (words.length === 0 || !msg) return;
+    // ✅ Finish typing slightly before the audio chunk ends
+    const interval = Math.max(80, Math.min(450, (durationMs * 0.9) / words.length));
+    let i = 0;
+    this.typingInterval = setInterval(() => {
+      if (i < words.length && msg) {
+        msg.text = msg.text ? msg.text + ' ' + words[i] : words[i];
+        i++;
+        this.cdr.detectChanges();
+        this.scrollToBottom();
+      } else {
+        this.stopTypewriter();
+      }
+    }, interval);
+  }
+
+  private stopTypewriter() {
+    if (this.typingInterval) { clearInterval(this.typingInterval); this.typingInterval = null; }
+  }
+
+  private finishTypedMessage(msg: any, fullText: string) {
+    this.stopTypewriter();
+    if (msg) {
+      msg.text = fullText;
+      this.cdr.detectChanges();
+      this.scrollToBottom();
+    }
+  }
+
   async loadQuickReplies(): Promise<void> {
     if (this.quickRepliesDismissed) return;
     try {
-      const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/suggestions', { ownerId: this.ownerId });
+      const res = await axios.post('http://localhost:3000/api/ai/guest/suggestions', { ownerId: this.ownerId });
       this.allSuggestions = res.data.suggestions || [];
       this.quickReplies = [...this.allSuggestions];
       this.showQuickReplies = true;
@@ -414,13 +470,17 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
     try {
       // ✅ Always use selected language for quick replies
       const quickReplyLang = this.selectedLanguageCode ? `name:${this.selectedLanguageCode}` : this.detectTextLang(msg);
-      const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/chat', {
+      const res = await axios.post('http://localhost:3000/api/ai/guest/chat', {
         ownerId: this.ownerId, guestId: this.guestId, guestName: this.guestName,
         message: msg, replyLang: quickReplyLang
       });
       const reply = res.data.reply;
-      this.addBotMessage(reply);
-      this.speakReply(reply, () => this.autoStartListening());
+      if (!this.micManuallyStopped) {
+        // ✅ Typewriter: text appears word-by-word while the voice speaks
+        this.speakReply(reply, () => this.autoStartListening(), false, true);
+      } else {
+        this.addBotMessage(reply);
+      }
     } catch (err) {
       this.addBotMessage('❌ Sorry, something went wrong. Please try again.');
     }
@@ -439,7 +499,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       if (this.mediaRecorder && this.mediaRecorder.state === 'recording') return;
       if (this.isSpeaking) return;
       this.beginRecognition();
-    }, 500);
+    }, 150);
   }
 
   get isMicActive(): boolean {
@@ -458,7 +518,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       this.beginRecognition();
       return;
     }
-    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false })
       .then((stream) => {
         this.recordingStream = stream;
         this.micPermissionGranted = true;
@@ -476,33 +536,38 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       return;
     }
 
-    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false })
       .then((stream) => { this.recordingStream = stream; this.startMediaRecorder(stream); })
       .catch((err) => { console.error('[Whisper] Mic access failed:', err); this.isListening = false; this.cdr.detectChanges(); });
   }
 
- private audioContext: any = null;
+  private audioContext: any = null;
   private audioAnalyser: any = null;
+  private vadSource: any = null;
   private vadInterval: any = null;
   private isSpeechActive: boolean = false;
   private speechEndTimeout: any = null;
   private micWatchdog: any = null;
-   // ✅ Shared AudioContext + live mic level (voice graphic)
+  // ✅ Shared AudioContext + live mic level (voice graphic)
   private sharedAudioContext: any = null;
   micLevel: number = 0;
 
-  private readonly SPEECH_END_SILENCE_MS = 800;
+  private readonly SPEECH_END_SILENCE_MS = 700;
 
   // ✅ Adaptive VAD — learns the room's noise level
   private noiseFloor: number = 15;
   private calibrationFrames: number = 0;
   private calibrationSum: number = 0;
   private consecutiveSpeechFrames: number = 0;
+  private silentFrames: number = 0;
+  private whisperInFlight: boolean = false;
+  private lastWhisperAt: number = 0;
+  private bargeInActive: boolean = false;
   private speechStartedRecordingAt: number = 0;
   private readonly CALIBRATION_FRAMES = 10;        // first 1 second = learn noise
-  private readonly SPEECH_MARGIN = 18;             // speech must be this much louder than room
-  private readonly FRAMES_TO_START = 3;            // 300ms sustained sound to count as speech
-  private readonly MIN_SPEECH_DURATION_MS = 350;   // ignore blips shorter than this
+  private readonly SPEECH_MARGIN = 10;             // speech must be this much louder than room
+  private readonly FRAMES_TO_START = 2;            // 300ms sustained sound to count as speech
+  private readonly MIN_SPEECH_DURATION_MS = 300;   // ignore blips shorter than this
   private hasCalibrated: boolean = false;
 
   private startMediaRecorder(stream: MediaStream) {
@@ -512,7 +577,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       ? 'audio/webm;codecs=opus'
       : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
 
-try {
+    try {
       this.mediaRecorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 96000 });
     } catch (e) {
       this.mediaRecorder = new MediaRecorder(stream);
@@ -529,6 +594,18 @@ try {
     };
 
     this.mediaRecorder.start(200);
+    // ✅ Safety: never record longer than 15s in one turn (only stops ITS OWN recorder)
+    const recRef = this.mediaRecorder;
+    setTimeout(() => {
+      if (this.mediaRecorder === recRef && recRef.state === 'recording') {
+        // ✅ 15s with NO speech detected — discard silently, don't process
+        if (!this.isSpeechActive && this.speechStartedRecordingAt === 0) {
+          this.audioChunks = [];
+        }
+        recRef.stop();
+      }
+    }, 15000);
+
     this.isListening = true;
     this.isSpeechActive = false;
     this.cdr.detectChanges();
@@ -550,8 +627,10 @@ try {
       this.audioAnalyser.fftSize = 512;
       this.audioAnalyser.smoothingTimeConstant = 0.3;
 
-      const source = this.audioContext.createMediaStreamSource(stream);
-      source.connect(this.audioAnalyser);
+      // ✅ Disconnect previous source before creating a new one (prevents node leak)
+      if (this.vadSource) { try { this.vadSource.disconnect(); } catch (e) { } }
+      this.vadSource = this.audioContext.createMediaStreamSource(stream);
+      this.vadSource.connect(this.audioAnalyser);
 
       const bufferLength = this.audioAnalyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
@@ -582,13 +661,17 @@ try {
             this.noiseFloor = this.calibrationSum / this.CALIBRATION_FRAMES;
             this.hasCalibrated = true;
             console.log('[VAD] Room noise floor:', this.noiseFloor.toFixed(1),
-                        '| Speech threshold:', (this.noiseFloor + this.SPEECH_MARGIN).toFixed(1));
+              '| Speech threshold:', (this.noiseFloor + this.SPEECH_MARGIN).toFixed(1));
           }
           return;
         }
 
-        const speechThreshold = this.noiseFloor + this.SPEECH_MARGIN;
-
+        // ✅ Slowly adapt noise floor downward if room is quieter than calibration
+        if (avg < this.noiseFloor && !this.isSpeechActive) {
+          this.noiseFloor = this.noiseFloor * 0.98 + avg * 0.02;
+        }
+        const botAudioPlaying = this.isSpeaking && this.currentAudio;
+        const speechThreshold = this.noiseFloor + (botAudioPlaying ? 16 : this.SPEECH_MARGIN);
         if (avg > speechThreshold) {
           this.consecutiveSpeechFrames++;
 
@@ -599,25 +682,26 @@ try {
 
             // ✅ Barge-in: stop bot when user starts talking
             if (this.isSpeaking) {
-               this.speechRequestId++; 
-               console.log('[Barge-in] User interrupted — stopping bot');
+              this.speechRequestId++;
+              console.log('[Barge-in] User interrupted — stopping bot');
               this.stopCurrentAudio();
               this.isSpeaking = false;
               this.speechEndedAt = Date.now();
               this.stopVAD();
+              this.bargeInActive = true;
               this.cdr.detectChanges();
-              setTimeout(() => this.beginRecognition(true), 100);
+              this.beginRecognition(true);
               return;
             }
           }
-          if (this.speechEndTimeout) { clearTimeout(this.speechEndTimeout); this.speechEndTimeout = null; }
+          if (this.consecutiveSpeechFrames >= 2 && this.speechEndTimeout) { clearTimeout(this.speechEndTimeout); this.speechEndTimeout = null; }
+          this.silentFrames = 0;
 
         } else {
           this.consecutiveSpeechFrames = 0;
-          if (this.isSpeechActive && !this.speechEndTimeout) {
+          this.silentFrames++;
+          if (this.isSpeechActive && this.silentFrames >= 4 && !this.speechEndTimeout) {
             this.speechEndTimeout = setTimeout(() => {
-              this.isSpeechActive = false;
-              this.speechEndTimeout = null;
               if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
                 this.mediaRecorder.stop();
               }
@@ -636,7 +720,8 @@ try {
   private stopVAD() {
     if (this.vadInterval) { clearInterval(this.vadInterval); this.vadInterval = null; }
     if (this.speechEndTimeout) { clearTimeout(this.speechEndTimeout); this.speechEndTimeout = null; }
-    if (this.audioAnalyser) { this.audioAnalyser = null; }
+    if (this.vadSource) { try { this.vadSource.disconnect(); } catch (e) { } this.vadSource = null; }
+    if (this.audioAnalyser) { try { this.audioAnalyser.disconnect(); } catch (e) { } this.audioAnalyser = null; }
     if (this.audioContext) {
       // ✅ Do NOT close the shared context — just release the reference
       this.audioContext = null;
@@ -648,6 +733,17 @@ try {
   private startMicWatchdog() {
     if (this.micWatchdog) return;
     this.micWatchdog = setInterval(() => {
+      // ✅ Self-heal: isSpeaking stuck true with no audio actually playing → reset
+      if (this.isSpeaking && !this.currentAudio) {
+        this.speakingStuckCount = (this.speakingStuckCount || 0) + 1;
+        if (this.speakingStuckCount >= 2) {   // stuck for ~6 seconds
+          console.log('[Watchdog] isSpeaking stuck — force reset');
+          this.isSpeaking = false;
+          this.speakingStuckCount = 0;
+        }
+      } else {
+        this.speakingStuckCount = 0;
+      }
       const shouldBeListening = this.micPermissionGranted && !this.micManuallyStopped
         && !this.isSpeaking && !this.isTyping;
       const isActuallyRecording = this.mediaRecorder && this.mediaRecorder.state === 'recording';
@@ -668,31 +764,43 @@ try {
   private async processAudioWithWhisper() {
     if (this.isSpeaking) { this.restartRecordingAfterDelay(); return; }
     if (this.audioChunks.length === 0) { this.restartRecordingAfterDelay(); return; }
+    // ✅ Throttle: one whisper request at a time, minimum 1.5s gap
+    if (this.whisperInFlight) {
+      this.audioChunks = [];
+      this.restartRecordingAfterDelay();
+      return;
+    }
+    if (Date.now() - this.lastWhisperAt < 800) {
+      await new Promise(r => setTimeout(r, 800));
+    }
+    this.whisperInFlight = true;
+    this.lastWhisperAt = Date.now();
 
     const mimeType = this.mediaRecorder?.mimeType || 'audio/webm';
     const audioBlob = new Blob(this.audioChunks, { type: mimeType });
     this.audioChunks = [];
 
-    // ✅ Reject clips where actual SPEECH was too short (noise blips) — fixes phantom words
+    // ✅ Reject noise blips — but NEVER throw away a big recording (real speech)
     const speechDuration = this.speechStartedRecordingAt > 0
       ? Date.now() - this.speechStartedRecordingAt - this.SPEECH_END_SILENCE_MS
       : 0;
     this.speechStartedRecordingAt = 0;
-    if (speechDuration < this.MIN_SPEECH_DURATION_MS) {
-      console.log('[VAD] Speech too short, ignored:', speechDuration, 'ms');
+    if (speechDuration < this.MIN_SPEECH_DURATION_MS && audioBlob.size < 25000) {
+      console.log('[VAD] Speech too short, ignored:', speechDuration, 'ms | size:', audioBlob.size);
+      this.whisperInFlight = false;
       this.restartRecordingAfterDelay();
       return;
     }
-    if (audioBlob.size < 3000) { this.restartRecordingAfterDelay(); return; }
+    if (audioBlob.size < 3000) { this.whisperInFlight = false; this.restartRecordingAfterDelay(); return; }
 
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'audio.webm');
-      formData.append('ownerId', this.ownerId);                      
-      formData.append('selectedLanguage', this.selectedLanguage); 
+      formData.append('ownerId', this.ownerId);
+      formData.append('selectedLanguage', this.selectedLanguage);
 
       const response = await axios.post(
-        'https://aiemployeeplatform.leadsfactory.info/api/ai/guest/whisper',
+        'http://localhost:3000/api/ai/guest/whisper',
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );
@@ -702,7 +810,7 @@ try {
 
       if (!transcript) { this.restartRecordingAfterDelay(); return; }
 
-      // ✅ NEW: Filter Whisper hallucinations (noise → fake YouTube phrases)
+      // ✅ Filter Whisper hallucinations (noise → fake YouTube phrases)
       const hallucinations = [
         'thanks for watching', "don't forget to subscribe", 'please subscribe',
         'thank you for watching', 'see you next time', 'like and subscribe',
@@ -716,27 +824,22 @@ try {
         return;
       }
 
-      // ✅ NEW: Reject URL-like hallucinations (Whisper noise pattern)
+      // ✅ Reject URL-like hallucinations (Whisper noise pattern)
       if (/www\.|https?:\/\/|\.com|\.uk|\.org/i.test(transcript)) {
         console.log('[Whisper] URL hallucination ignored:', transcript);
         this.restartRecordingAfterDelay();
         return;
       }
 
-      // ✅ NEW: Reject unsupported languages (background TV noise etc.)
-
-      // ✅ NEW: Reject unsupported languages (background TV noise etc.)
+      // ✅ Reject unsupported languages (background TV noise etc.)
       const supportedLangs = ['english', 'tamil', 'hindi', 'telugu', 'malayalam', 'kannada'];
       if (detectedLanguage && !supportedLangs.includes(detectedLanguage)) {
         console.log('[Whisper] Unsupported language ignored:', detectedLanguage);
         this.restartRecordingAfterDelay();
         return;
       }
-      // ✅ END NEW
 
       if (this.isEcho(transcript)) { this.restartRecordingAfterDelay(); return; }
-
-      // ... rest stays the same (langMap, detectedLang, sendMessageWithLang)
 
       const langMap: { [key: string]: string } = {
         'english': 'en-IN', 'tamil': 'ta-IN', 'hindi': 'hi-IN',
@@ -755,6 +858,8 @@ try {
     } catch (err) {
       console.error('[Whisper] Transcription failed:', err);
       this.restartRecordingAfterDelay();
+    } finally {
+      this.whisperInFlight = false;
     }
   }
 
@@ -765,7 +870,7 @@ try {
         if (this.micPermissionGranted && !this.micManuallyStopped && !this.isSpeaking) {
           this.beginRecognition();
         }
-      }, 500);
+      }, 100);
     }
   }
 
@@ -773,7 +878,7 @@ try {
     if (this.silenceDetectTimer) { clearTimeout(this.silenceDetectTimer); this.silenceDetectTimer = null; }
     this.stopVAD();
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      try { this.mediaRecorder.stop(); } catch (e) {}
+      try { this.mediaRecorder.onstop = null; this.mediaRecorder.stop(); } catch (e) { }
     }
     this.mediaRecorder = null;
     if (killStream && this.recordingStream) {
@@ -796,11 +901,11 @@ try {
     if (!text) return false;
     const t = text.toLowerCase();
     const tanglishWords = [
-      'vanakkam','velai','nerum','enna','epdi','epaddi','romba','konjam',
-      'paaru','seri','nandri','sollu','theriyum','theriyala','illai',
-      'aamam','vanga','ponga','irukku','irukkinga','irukinga','iruka',
-      'nalla','mudiyuma','mudiyum','sari','sariya','unga','neenga',
-      'idhu','edhu','andha','antha','naan','naam','naanga','yaar','yaaru',
+      'vanakkam', 'velai', 'nerum', 'enna', 'epdi', 'epaddi', 'romba', 'konjam',
+      'paaru', 'seri', 'nandri', 'sollu', 'theriyum', 'theriyala', 'illai',
+      'aamam', 'vanga', 'ponga', 'irukku', 'irukkinga', 'irukinga', 'iruka',
+      'nalla', 'mudiyuma', 'mudiyum', 'sari', 'sariya', 'unga', 'neenga',
+      'idhu', 'edhu', 'andha', 'antha', 'naan', 'naam', 'naanga', 'yaar', 'yaaru',
     ];
     return tanglishWords.some(w => t.includes(w));
   }
@@ -832,7 +937,7 @@ try {
     this.speechRequestId++;
   }
 
-// ✅ Split text into chunks: first sentence separate, rest together
+  // ✅ Split text into chunks: first sentence separate, rest together
   private splitForTTS(text: string): string[] {
     const sentences = text.match(/[^.!?।]+[.!?।]+|[^.!?।]+$/g) || [text];
     if (sentences.length <= 1) return [text];
@@ -844,12 +949,12 @@ try {
   // ✅ Fetch TTS audio for one chunk
   private fetchTTS(text: string): Promise<string> {
     const language = this.selectedLanguage || 'english';
-    return axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/tts', { text, language })
+    return axios.post('http://localhost:3000/api/ai/tts', { text, language })
       .then(res => `data:audio/mp3;base64,${res.data.audioContent}`);
   }
 
   // ✅ Play one audio chunk, resolve when finished (with watchdog)
-  private playAudioSrc(src: string, myId: number, chunkText: string): Promise<void> {
+  private playAudioSrc(src: string, myId: number, chunkText: string, onPlayStart?: (durationMs: number) => void): Promise<void> {
     return new Promise((resolve) => {
       if (this.speechRequestId !== myId) { resolve(); return; }
 
@@ -873,7 +978,15 @@ try {
         resolve();
       };
 
-      audio.play().catch(() => {
+      audio.play().then(() => {
+        // ✅ Typewriter: report the real audio duration the moment playback starts
+        if (onPlayStart) {
+          const durMs = (isFinite(audio.duration) && audio.duration > 0)
+            ? audio.duration * 1000
+            : Math.max(1500, chunkText.length * 80);
+          onPlayStart(durMs);
+        }
+      }).catch(() => {
         clearTimeout(watchdog);
         this.currentAudio = null;
         resolve();
@@ -881,10 +994,18 @@ try {
     });
   }
 
-  async speakReply(text: string, onEnd?: () => void) {
-    // ✅ Stop any currently playing audio first
-    this.stopCurrentAudio();
-    this.stopRecording(false);
+async speakReply(
+  text: string,
+  onEnd?: () => void,
+  skipVAD: boolean = false,
+  typeText: boolean = false
+) {
+
+  this.stopCurrentAudio();
+  this.stopTypewriter();
+  this.stopRecording(false);
+
+  // remaining existing code...
     if (this.silenceTimer) { clearTimeout(this.silenceTimer); this.silenceTimer = null; }
     this.pendingTranscript = '';
     this.isListening = false;
@@ -893,21 +1014,26 @@ try {
     const myId = this.speechRequestId;
     this.synthesis?.cancel();
 
-    // ✅ Start VAD during bot speech to detect user interruption
-    if (this.recordingStream && this.recordingStream.active) {
-      this.startVAD(this.recordingStream);
-    } else if (this.micPermissionGranted) {
-      navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-        .then(stream => {
-          this.recordingStream = stream;
-          this.startVAD(stream);
-        }).catch(() => {});
+    // ✅ Typewriter: the message bubble for this reply (created when voice starts)
+    let typedMsg: any = null;
+
+    // ✅ Start VAD during bot speech to detect user interruption (skipped for intro)
+    if (!skipVAD) {
+      if (this.recordingStream && this.recordingStream.active) {
+        this.startVAD(this.recordingStream);
+      } else if (this.micPermissionGranted) {
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+          .then(stream => {
+            this.recordingStream = stream;
+            this.startVAD(stream);
+          }).catch(() => { });
+      }
     }
 
-    try {
-      // ✅ Split reply into chunks and fire ALL TTS requests in PARALLEL
-      const chunks = this.splitForTTS(text);
-      const ttsPromises = chunks.map(c => this.fetchTTS(c));
+   try {
+  // speechText is only for voice
+  const chunks = this.splitForTTS(text);
+  const ttsPromises = chunks.map(c => this.fetchTTS(c));
 
       this.isSpeaking = true;
       this.speechStartedAt = Date.now();
@@ -919,7 +1045,18 @@ try {
         if (this.speechRequestId !== myId) break;
         const src = await ttsPromises[i];
         if (this.speechRequestId !== myId) break;
-        await this.playAudioSrc(src, myId, chunks[i]);
+        // ✅ Typewriter: create the empty bubble just before the voice starts
+        if (typeText && !typedMsg) typedMsg = this.beginTypedMessage();
+        const chunkText = chunks[i];
+        await this.playAudioSrc(src, myId, chunkText, typeText ? (durMs) => {
+          this.typeChunkIntoMessage(typedMsg, chunkText, durMs);
+        } : undefined);
+      }
+
+      // ✅ Typewriter: ALWAYS end with the full text visible (even if interrupted)
+      if (typeText) {
+        if (!typedMsg) typedMsg = this.beginTypedMessage();
+        this.finishTypedMessage(typedMsg, text);
       }
 
       // ✅ Finished all chunks (or was interrupted)
@@ -933,6 +1070,11 @@ try {
 
     } catch (err) {
       console.error('[TTS] Failed:', err);
+      // ✅ Typewriter: TTS failed — still show the full text so it is never lost
+      if (typeText) {
+        if (!typedMsg) typedMsg = this.beginTypedMessage();
+        this.finishTypedMessage(typedMsg, text);
+      }
       if (this.speechRequestId === myId) {
         this.isSpeaking = false;
         this.currentAudio = null;
@@ -952,14 +1094,22 @@ try {
     this.autoStartListening();
   }
 
+  private pendingVoiceMsg: string = '';
+
   private async sendMessageWithLang(msg: string, whisperLang: string): Promise<void> {
-    if (!msg.trim() || this.isTyping) return;
+    if (!msg.trim()) return;
+    // ✅ If busy, QUEUE the message instead of dropping it
+    if (this.isTyping) {
+      console.log('[Queue] Busy — queuing voice message:', msg);
+      this.pendingVoiceMsg = msg;
+      return;
+    }
 
     this.userMessage = '';
     this.quickRepliesDismissed = true;
     this.showQuickReplies = false;
     this.quickReplies = [];
-   this.addUserMessage(msg);
+    this.addUserMessage(msg);
     this.isTyping = true;
     this.lastSpokenText = '';
     this.cdr.detectChanges();
@@ -985,7 +1135,7 @@ try {
     const replyLang = this.selectedLanguageCode ? `name:${this.selectedLanguageCode}` : 'auto';
 
     try {
-      const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/chat', {
+      const res = await axios.post('http://localhost:3000/api/ai/guest/chat', {
         ownerId: this.ownerId, guestId: this.guestId, guestName: this.guestName,
         message: msg,
         replyLang: replyLang,
@@ -994,9 +1144,17 @@ try {
 
       const reply = res.data.reply;
       this.isTyping = false;
-      // ✅ Fix 2: message and voice at same time
-      this.addBotMessage(reply);
-      this.speakReply(reply, () => this.restartRecordingAfterDelay());
+      // ✅ Typewriter: text appears word-by-word while the voice speaks
+      this.speakReply(reply, () => {
+        // ✅ Send queued message if one arrived while we were busy
+        if (this.pendingVoiceMsg) {
+          const queued = this.pendingVoiceMsg;
+          this.pendingVoiceMsg = '';
+          this.sendMessageWithLang(queued, '');
+        } else {
+          this.restartRecordingAfterDelay();
+        }
+      }, false, true);
       this.cdr.detectChanges();
 
     } catch (err) {
@@ -1037,26 +1195,31 @@ try {
 
     try {
       // ✅ Detect language from typed text first, fallback to selected language
-     // ✅ Always use selected language for typed messages
+      // ✅ Always use selected language for typed messages
       const msgLang = this.selectedLanguageCode ? `name:${this.selectedLanguageCode}` : 'auto';
 
-      const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/chat', {
+      const res = await axios.post('http://localhost:3000/api/ai/guest/chat', {
         ownerId: this.ownerId, guestId: this.guestId, guestName: this.guestName,
         message: msg, replyLang: msgLang
       });
 
       const reply = res.data.reply;
       this.isTyping = false;
-      // ✅ Fix 2: message and voice at same time
-      this.addBotMessage(reply);
-      this.speakReply(reply, () => this.autoStartListening());
+      // ✅ Mic ON: typewriter text synced with voice. Mic OFF: text immediately, no voice
+      if (!this.micManuallyStopped) {
+        this.speakReply(reply, () => this.autoStartListening(), false, true);
+      } else {
+        this.addBotMessage(reply);
+      }
       this.cdr.detectChanges();
 
     } catch (err) {
       this.addBotMessage('❌ Sorry, something went wrong. Please try again.');
       this.isTyping = false;
       this.cdr.detectChanges();
-      this.speakReply('Sorry, something went wrong. Please try again.', () => this.autoStartListening());
+      if (!this.micManuallyStopped) {
+        this.speakReply('Sorry, something went wrong. Please try again.', () => this.autoStartListening());
+      }
     }
   }
 }
