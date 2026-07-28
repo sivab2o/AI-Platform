@@ -30,12 +30,20 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   guestMobile: string = '';
   guestId: string = '';
 
-  isVoiceMode: boolean = true;
+  isVoiceMode: boolean = false;
+
+  showFullVoiceScreen: boolean = false;
+  voiceStatusText: string = '';
 
   // ✅ Language selection
   selectedLanguage: string = '';
   selectedLanguageCode: string = '';
   showLangSelect: boolean = false;
+  businessName: string = '';
+  private lastUserSpeechTime = 0;
+  private processingVoice = false;
+  private vadPreBuffer: Blob[] = [];
+  private readonly MAX_PREBUFFER_CHUNKS = 8;
 
   languages = [
     { name: 'Tamil', code: 'tamil', flag: '🇮🇳', whisper: 'ta' },
@@ -61,6 +69,8 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   askedCount: number = 0;
   maxQuickReplies: number = 3;
   quickRepliesDismissed: boolean = true;
+  private voiceConversationStarted = false;
+  private isIntroPlaying = false;
 
   // ✅ Voice variables
   isListening: boolean = false;
@@ -77,13 +87,45 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   micPermissionGranted: boolean = false;
   micManuallyStopped: boolean = false;
 
-  private silenceTimer: any = null;
   private pendingTranscript: string = '';
   private readonly SILENCE_MS = 1200;
 
   private speechEndedAt: number = 0;
   private speechStartedAt: number = 0;
   private speakingStuckCount: number = 0;
+
+  private silenceTimer: any;
+
+
+
+  private startSilenceDetection() {
+
+    if (this.silenceTimer) {
+      clearTimeout(this.silenceTimer);
+    }
+
+
+    this.silenceTimer = setTimeout(() => {
+
+
+      if (
+        this.mediaRecorder &&
+        this.mediaRecorder.state === "recording"
+      ) {
+
+        console.log(
+          "🎤 User stopped speaking"
+        );
+
+
+        this.mediaRecorder.stop();
+
+      }
+
+
+    }, 3500);
+
+  }
 
   private get MIC_COOLDOWN_MS(): number {
     const speechDuration = this.speechStartedAt > 0
@@ -163,7 +205,9 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
             text: '❌ Invalid link. This AI assistant does not exist.',
             time: this.formatTime()
           });
-        }
+        }else {
+        this.businessName = res.data.business_name || 'our business';
+    }
       })
       .catch(() => {
         this.step = 'invalid';
@@ -262,7 +306,14 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
           noiseSuppression: true,
           autoGainControl: true,
           channelCount: 1,
-          sampleRate: 48000
+          sampleRate: 48000,
+          ...({
+            voiceIsolation: true,
+            googEchoCancellation: true,
+            googNoiseSuppression: true,
+            googAutoGainControl: true,
+            googHighpassFilter: true
+          } as any)
         },
         video: false
       });
@@ -291,9 +342,6 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
             this.messages.push({ sender: 'bot', text: c.reply, time: this.formatTime(c.created_at) });
           });
         }
-
-        await this.requestMicPermissionOnce();
-        this.startMicWatchdog();
         this.collectingInfo = false;
         this.cdr.detectChanges();
 
@@ -305,18 +353,36 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
               selectedLanguage: this.selectedLanguageCode
             });
             const welcomeMsg = welcomeRes.data.reply;
+            
             this.stopCurrentAudio();
             this.addBotMessage(welcomeMsg);
             this.speakReply(welcomeMsg, async () => {
-              // ✅ Mic OFF after introduction — user turns it on manually
+
+              console.log("🔇 INTRO FINISHED - MIC WAITING FOR USER CLICK");
+
               this.isSpeaking = false;
-              this.stopVoiceInput();
-              // ✅ Show PRODUCT buttons AFTER welcome finishes
+              this.isListening = false;
+              this.voiceStatusText = "Tap microphone";
+
+              this.mediaRecorder = null;
+              this.isSpeechActive = false;
+              this.pendingTranscript = '';
+
               const prods = welcomeRes.data.products || [];
-              if (prods.length) { this.quickReplies = prods; this.showQuickReplies = true; }
+
+              console.log(welcomeRes.data, 'prods');
+              
+
+              if (prods.length) {
+                this.quickReplies = prods;
+                this.showQuickReplies = true;
+              }
+
               this.cdr.detectChanges();
+
               setTimeout(() => this.scrollToBottom(), 100);
-            }, true);   // ✅ skipVAD = true — no listening during introduction
+
+            }, true);
           } catch (err) { console.error(err); }
           this.cdr.detectChanges();
         }, 300);
@@ -326,9 +392,6 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
           name: this.guestName, email: '', mobile: this.guestMobile, ownerId: this.ownerId
         });
         this.guestId = res.data.guestId;
-
-        await this.requestMicPermissionOnce();
-        this.startMicWatchdog();
         this.collectingInfo = false;
         this.cdr.detectChanges();
 
@@ -343,15 +406,29 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
             this.stopCurrentAudio();
             this.addBotMessage(welcomeMsg);
             this.speakReply(welcomeMsg, async () => {
-              // ✅ Mic OFF after introduction — user turns it on manually
+
+              console.log("🔇 INTRO FINISHED - MIC WAITING FOR USER CLICK");
+
               this.isSpeaking = false;
-              this.stopVoiceInput();
-              // ✅ Show PRODUCT buttons AFTER welcome finishes
+              this.isListening = false;
+              this.voiceStatusText = "Tap microphone";
+
+              this.mediaRecorder = null;
+              this.isSpeechActive = false;
+              this.pendingTranscript = '';
+
               const prods = welcomeRes.data.products || [];
-              if (prods.length) { this.quickReplies = prods; this.showQuickReplies = true; }
+
+              if (prods.length) {
+                this.quickReplies = prods;
+                this.showQuickReplies = true;
+              }
+
               this.cdr.detectChanges();
+
               setTimeout(() => this.scrollToBottom(), 100);
-            }, true);   // ✅ skipVAD = true — no listening during introduction
+
+            }, true);
           } catch (err) { console.error(err); }
           this.cdr.detectChanges();
         }, 300);
@@ -381,15 +458,55 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
     return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
   }
 
- private prepareTextForSpeech(text: string): string {
-  return text.replace(
-    /(?:\+91[\s-]?)?\b\d{10}\b/g,
-    (phoneNumber: string) => {
-      const digitsOnly = phoneNumber.replace(/\D/g, '');
+private prepareTextForSpeech(text: string): string {
 
-      return digitsOnly;
+
+  const hourWords:any = {
+    "1":"one",
+    "2":"two",
+    "3":"three",
+    "4":"four",
+    "5":"five",
+    "6":"six",
+    "7":"seven",
+    "8":"eight",
+    "9":"nine",
+    "10":"ten",
+    "11":"eleven",
+    "12":"twelve"
+  };
+
+
+  // Convert 9 AM, 6 PM
+  text = text.replace(
+    /\b(\d{1,2})\s*(AM|PM|am|pm)\b/g,
+    (match, hour, period) => {
+
+      return `${hourWords[hour] || hour} ${period.toUpperCase()}`;
+
     }
   );
+
+
+  // Convert 9:30 AM, 1:00 PM
+  text = text.replace(
+    /\b(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)\b/g,
+    (match, hour, minute, period) => {
+
+      if(minute === "00"){
+
+        return `${hourWords[hour] || hour} ${period.toUpperCase()}`;
+
+      }
+
+      return `${hourWords[hour] || hour} ${minute} ${period.toUpperCase()}`;
+
+    }
+  );
+
+
+  return text;
+
 }
 
   addBotMessage(text: string): void {
@@ -492,18 +609,22 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   private autoStartListening() {
     if (!this.micPermissionGranted || this.micManuallyStopped) return;
     if (this.mediaRecorder && this.mediaRecorder.state === 'recording') return;
-    if (this.isSpeaking) return;
 
     setTimeout(() => {
       if (!this.micPermissionGranted || this.micManuallyStopped) return;
       if (this.mediaRecorder && this.mediaRecorder.state === 'recording') return;
       if (this.isSpeaking) return;
-      this.beginRecognition();
-    }, 150);
+
+      this.beginRecognition(true);
+
+    }, 300);
   }
 
   get isMicActive(): boolean {
-    return this.micPermissionGranted && !this.micManuallyStopped;
+    return !!(
+      this.mediaRecorder &&
+      this.mediaRecorder.state === 'recording'
+    );
   }
 
   get isRecording(): boolean {
@@ -511,34 +632,163 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   }
 
   startVoiceInput() {
-    if (this.isMicActive) { this.stopVoiceInput(); return; }
+
+    console.log("🎤 USER STARTED VOICE");
+
+    this.voiceConversationStarted = true;
+
     this.micManuallyStopped = false;
-    if (this.recordingStream && this.recordingStream.active) {
-      this.micPermissionGranted = true;
+
+    if (
+      this.recordingStream &&
+      this.recordingStream.active
+    ) {
+
       this.beginRecognition();
       return;
+
     }
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false })
-      .then((stream) => {
+
+
+    navigator.mediaDevices.getUserMedia({
+
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      },
+
+      video: false
+
+    })
+
+      .then(stream => {
+
+        console.log("🎤 MIC READY");
+
         this.recordingStream = stream;
+
         this.micPermissionGranted = true;
+
         this.beginRecognition();
+
       })
-      .catch(() => { alert('Microphone permission denied. Please allow microphone access and try again.'); });
+
+      .catch(err => {
+
+        console.error(
+          "Mic permission failed",
+          err
+        );
+
+      });
+
   }
 
   private beginRecognition(force: boolean = false) {
-    if (!force && this.isSpeaking) return;
-    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') return;
 
-    if (this.recordingStream && this.recordingStream.active) {
-      this.startMediaRecorder(this.recordingStream);
+    console.log(
+      "🎤 BEGIN RECOGNITION"
+    );
+
+
+
+    if (this.processingVoice) {
+
+      console.log(
+        "⏳ VOICE PROCESS BUSY"
+      );
+
       return;
+
     }
 
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false })
-      .then((stream) => { this.recordingStream = stream; this.startMediaRecorder(stream); })
-      .catch((err) => { console.error('[Whisper] Mic access failed:', err); this.isListening = false; this.cdr.detectChanges(); });
+
+
+    if (!force && this.isSpeaking) {
+
+      console.log(
+        "⛔ AI SPEAKING"
+      );
+
+      return;
+
+    }
+
+
+
+    if (
+      this.mediaRecorder &&
+      this.mediaRecorder.state === "recording"
+    ) {
+
+      console.log(
+        "🎙️ ALREADY RECORDING"
+      );
+
+      return;
+
+    }
+
+
+
+
+    if (
+      this.recordingStream &&
+      this.recordingStream.active
+    ) {
+
+      this.startMediaRecorder(
+        this.recordingStream
+      );
+
+      return;
+
+    }
+
+
+
+
+    navigator.mediaDevices
+      .getUserMedia({
+
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
+
+        video: false
+
+      })
+      .then(stream => {
+
+
+        this.recordingStream = stream;
+
+
+        this.startMediaRecorder(stream);
+
+
+
+      })
+      .catch(err => {
+
+
+        console.error(
+          "MIC ERROR",
+          err
+        );
+
+
+        this.isListening = false;
+
+        this.cdr.detectChanges();
+
+
+      });
+
+
   }
 
   private audioContext: any = null;
@@ -552,7 +802,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   private sharedAudioContext: any = null;
   micLevel: number = 0;
 
-  private readonly SPEECH_END_SILENCE_MS = 700;
+  private readonly SPEECH_END_SILENCE_MS = 500;
 
   // ✅ Adaptive VAD — learns the room's noise level
   private noiseFloor: number = 15;
@@ -565,156 +815,485 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   private bargeInActive: boolean = false;
   private speechStartedRecordingAt: number = 0;
   private readonly CALIBRATION_FRAMES = 10;        // first 1 second = learn noise
-  private readonly SPEECH_MARGIN = 10;             // speech must be this much louder than room
+  private readonly SPEECH_MARGIN = 18;             // speech must be this much louder than room
   private readonly FRAMES_TO_START = 2;            // 300ms sustained sound to count as speech
-  private readonly MIN_SPEECH_DURATION_MS = 300;   // ignore blips shorter than this
+  private readonly MIN_SPEECH_DURATION_MS = 150;   // ignore blips shorter than this
   private hasCalibrated: boolean = false;
+  private interruptBufferRecorder: MediaRecorder | null = null;
+  private interruptBufferChunks: Blob[] = [];
+  private interruptBufferStream: MediaStream | null = null;
 
-  private startMediaRecorder(stream: MediaStream) {
-    this.audioChunks = [];
+  private startInterruptBuffer(stream: MediaStream) {
 
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus'
-      : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+    console.log("🎧 INTERRUPT BUFFER STARTED");
+
+
+    this.interruptBufferChunks = [];
+
+
+    const mimeType =
+      MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+
 
     try {
-      this.mediaRecorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 96000 });
+
+      this.interruptBufferRecorder =
+        new MediaRecorder(
+          stream,
+          {
+            mimeType,
+            audioBitsPerSecond: 48000
+          }
+        );
+
+
     } catch (e) {
-      this.mediaRecorder = new MediaRecorder(stream);
+
+      this.interruptBufferRecorder =
+        new MediaRecorder(stream);
+
     }
 
+
+
+    this.interruptBufferRecorder.ondataavailable =
+      (event: any) => {
+
+
+        if (event.data && event.data.size > 0) {
+
+
+          this.interruptBufferChunks.push(
+            event.data
+          );
+
+
+          // Keep only last ~2 seconds
+          if (this.interruptBufferChunks.length > 10) {
+
+            this.interruptBufferChunks.shift();
+
+          }
+
+        }
+
+      };
+
+
+    this.interruptBufferRecorder.start(200);
+
+  }
+
+  private startMediaRecorder(stream: MediaStream) {
+
+    console.log("🎙️ START MEDIA RECORDER");
+
+    this.audioChunks = [];
+
+    const mimeType =
+      MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+
+    try {
+
+      this.mediaRecorder = new MediaRecorder(
+        stream,
+        {
+          mimeType,
+          audioBitsPerSecond: 48000
+        }
+      );
+
+    } catch (e) {
+
+      this.mediaRecorder = new MediaRecorder(stream);
+
+    }
+
+
+    console.log(
+      "Recorder state BEFORE:",
+      this.mediaRecorder.state
+    );
+
+
     this.mediaRecorder.ondataavailable = (event: any) => {
-      if (event.data && event.data.size > 0) this.audioChunks.push(event.data);
+
+      if (event.data && event.data.size > 0) {
+
+        this.audioChunks.push(event.data);
+
+
+        // Keep last audio pieces for ChatGPT-style pre-buffer
+        this.vadPreBuffer.push(event.data);
+
+
+        if (this.vadPreBuffer.length > this.MAX_PREBUFFER_CHUNKS) {
+
+          this.vadPreBuffer.shift();
+
+        }
+
+      }
+
     };
 
-    this.mediaRecorder.onstop = () => { this.stopVAD(); this.processAudioWithWhisper(); };
-    this.mediaRecorder.onerror = (event: any) => {
-      console.error('[Whisper] MediaRecorder error:', event);
-      this.isListening = false; this.cdr.detectChanges();
+
+    this.mediaRecorder.onstart = () => {
+
+      console.log(
+        "✅ MEDIA RECORDER STARTED"
+      );
+
     };
+
+
+    this.mediaRecorder.onstop = async () => {
+
+
+      console.log(
+        "🛑 MEDIA RECORDER STOP EVENT"
+      );
+
+
+      console.log(
+        "TOTAL CHUNKS:",
+        this.audioChunks.length
+      );
+
+
+      if (this.whisperInFlight) {
+
+        console.log(
+          "⏳ WHISPER BUSY"
+        );
+
+        return;
+
+      }
+
+
+      await this.processAudioWithWhisper();
+
+
+    };
+
+
+    this.mediaRecorder.onerror = (err: any) => {
+
+      console.error(
+        "MEDIA RECORDER ERROR",
+        err
+      );
+
+    };
+
 
     this.mediaRecorder.start(200);
-    // ✅ Safety: never record longer than 15s in one turn (only stops ITS OWN recorder)
-    const recRef = this.mediaRecorder;
-    setTimeout(() => {
-      if (this.mediaRecorder === recRef && recRef.state === 'recording') {
-        // ✅ 15s with NO speech detected — discard silently, don't process
-        if (!this.isSpeechActive && this.speechStartedRecordingAt === 0) {
-          this.audioChunks = [];
-        }
-        recRef.stop();
-      }
-    }, 15000);
+
+
+    console.log(
+      "Recorder state AFTER:",
+      this.mediaRecorder.state
+    );
+
 
     this.isListening = true;
-    this.isSpeechActive = false;
+
     this.cdr.detectChanges();
+
+
     this.startVAD(stream);
-    this.scrollToBottom();
+
   }
 
   private startVAD(stream: MediaStream) {
+    if (this.vadInterval) {
+
+      clearInterval(this.vadInterval);
+
+    }
+
+
     try {
-      // ✅ Reuse ONE AudioContext (Chrome limits ~6 per page — creating new each cycle kills VAD after ~8 questions)
-      if (!this.sharedAudioContext || this.sharedAudioContext.state === 'closed') {
-        this.sharedAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      if (this.sharedAudioContext.state === 'suspended') {
-        this.sharedAudioContext.resume();
-      }
-      this.audioContext = this.sharedAudioContext;
-      this.audioAnalyser = this.audioContext.createAnalyser();
-      this.audioAnalyser.fftSize = 512;
-      this.audioAnalyser.smoothingTimeConstant = 0.3;
 
-      // ✅ Disconnect previous source before creating a new one (prevents node leak)
-      if (this.vadSource) { try { this.vadSource.disconnect(); } catch (e) { } }
-      this.vadSource = this.audioContext.createMediaStreamSource(stream);
-      this.vadSource.connect(this.audioAnalyser);
 
-      const bufferLength = this.audioAnalyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
+      if (!this.audioContext || this.audioContext.state === "closed") {
 
-      // ✅ Calibrate only ONCE (never while bot is speaking)
-      if (!this.hasCalibrated && !this.isSpeaking) {
-        this.calibrationFrames = 0;
-        this.calibrationSum = 0;
-      } else {
-        this.calibrationFrames = this.CALIBRATION_FRAMES; // skip calibration, use existing noiseFloor
+        this.audioContext =
+          new (window.AudioContext || (window as any).webkitAudioContext)();
+
       }
+
+
+      const analyser =
+        this.audioContext.createAnalyser();
+
+
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.3;
+
+
+      const source =
+        this.audioContext.createMediaStreamSource(stream);
+
+
+      source.connect(analyser);
+
+
+      this.audioAnalyser = analyser;
+
+
+      const data =
+        new Uint8Array(analyser.fftSize);
+
+
+
+      this.isSpeechActive = false;
       this.consecutiveSpeechFrames = 0;
+      this.silentFrames = 0;
+
+
 
       this.vadInterval = setInterval(() => {
-        if (!this.audioAnalyser) return;
-        this.audioAnalyser.getByteFrequencyData(dataArray);
-        const avg = dataArray.reduce((a: number, b: number) => a + b, 0) / bufferLength;
-
-        // ✅ Live mic level for the voice graphic (0 to 1)
-        this.micLevel = Math.min(1, Math.max(0, (avg - this.noiseFloor) / 50));
 
 
-        // ✅ Phase 1: calibrate — learn this room's noise level (first 1 second)
-        if (this.calibrationFrames < this.CALIBRATION_FRAMES) {
-          this.calibrationFrames++;
-          this.calibrationSum += avg;
-          if (this.calibrationFrames === this.CALIBRATION_FRAMES) {
-            this.noiseFloor = this.calibrationSum / this.CALIBRATION_FRAMES;
-            this.hasCalibrated = true;
-            console.log('[VAD] Room noise floor:', this.noiseFloor.toFixed(1),
-              '| Speech threshold:', (this.noiseFloor + this.SPEECH_MARGIN).toFixed(1));
-          }
-          return;
+        analyser.getByteTimeDomainData(data);
+
+
+        let sum = 0;
+
+
+        for (let i = 0; i < data.length; i++) {
+
+          const value = (data[i] - 128) / 128;
+
+          sum += value * value;
+
         }
 
-        // ✅ Slowly adapt noise floor downward if room is quieter than calibration
-        if (avg < this.noiseFloor && !this.isSpeechActive) {
-          this.noiseFloor = this.noiseFloor * 0.98 + avg * 0.02;
-        }
-        const botAudioPlaying = this.isSpeaking && this.currentAudio;
-        const speechThreshold = this.noiseFloor + (botAudioPlaying ? 16 : this.SPEECH_MARGIN);
-        if (avg > speechThreshold) {
+
+        const rms =
+          Math.sqrt(sum / data.length);
+
+
+        const level = rms * 100;
+
+
+
+        const SPEECH_LEVEL = 7;
+
+
+
+        if (level > SPEECH_LEVEL) {
+
+
           this.consecutiveSpeechFrames++;
 
-          // ✅ Require 300ms of sustained sound — filters noise blips (fixes phantom words)
-          if (this.consecutiveSpeechFrames >= this.FRAMES_TO_START && !this.isSpeechActive) {
-            this.isSpeechActive = true;
-            this.speechStartedRecordingAt = Date.now();
-
-            // ✅ Barge-in: stop bot when user starts talking
-            if (this.isSpeaking) {
-              this.speechRequestId++;
-              console.log('[Barge-in] User interrupted — stopping bot');
-              this.stopCurrentAudio();
-              this.isSpeaking = false;
-              this.speechEndedAt = Date.now();
-              this.stopVAD();
-              this.bargeInActive = true;
-              this.cdr.detectChanges();
-              this.beginRecognition(true);
-              return;
-            }
-          }
-          if (this.consecutiveSpeechFrames >= 2 && this.speechEndTimeout) { clearTimeout(this.speechEndTimeout); this.speechEndTimeout = null; }
           this.silentFrames = 0;
 
-        } else {
-          this.consecutiveSpeechFrames = 0;
-          this.silentFrames++;
-          if (this.isSpeechActive && this.silentFrames >= 4 && !this.speechEndTimeout) {
-            this.speechEndTimeout = setTimeout(() => {
-              if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-                this.mediaRecorder.stop();
+
+
+         let speechStartFrames = 3;
+
+
+// faster detection for short words
+if (!this.isSpeechActive) {
+
+    speechStartFrames = 2;
+
+}
+
+
+if(this.consecutiveSpeechFrames >= speechStartFrames){
+
+
+            if (!this.isSpeechActive) {
+
+
+              console.log(
+                "🗣️ USER START TALKING"
+              );
+
+
+              if (this.isSpeaking) {
+
+
+                console.log(
+                  "🛑 REAL USER INTERRUPT"
+                );
+
+
+                // Stop AI immediately
+                this.speechRequestId++;
+
+                this.isSpeaking = false;
+
+
+                try {
+
+                  window.speechSynthesis.cancel();
+
+                } catch (e) { }
+
+
+                if (this.currentAudio) {
+
+                  try {
+
+                    this.currentAudio.pause();
+
+                    this.currentAudio.currentTime = 0;
+
+                  } catch (e) { }
+
+                }
+
+
+                this.stopCurrentAudio();
+
+
+
+                setTimeout(() => {
+
+
+                  if (
+                    this.recordingStream &&
+                    (
+                      !this.mediaRecorder ||
+                      this.mediaRecorder.state !== "recording"
+                    )
+                  ) {
+
+
+                    console.log(
+                      "🎙️ START INTERRUPTION RECORDING"
+                    );
+
+
+                    this.audioChunks = [
+                      ...this.interruptBufferChunks
+                    ];
+
+
+                    this.startMediaRecorder(
+                      this.recordingStream
+                    );
+
+
+                  }
+
+
+                }, 50);
+
+
+
               }
-            }, this.SPEECH_END_SILENCE_MS);
+
+              this.isSpeechActive = true;
+
+
+              this.speechStartedAt = Date.now();
+
+
+            }
+
           }
+
+
         }
+        else {
+
+
+          if (this.isSpeechActive) {
+
+
+            this.silentFrames++;
+
+
+let requiredSilence = 12;
+
+const speechDuration =
+    Date.now() - this.speechStartedAt;
+
+
+// Short speech
+if (speechDuration < 2000) {
+
+    requiredSilence = 10;
+
+}
+
+
+// Medium speech
+else if (speechDuration < 8000) {
+
+    requiredSilence = 15;
+
+}
+
+
+// Long speech
+else {
+
+    requiredSilence = 20;
+
+}
+
+
+if(this.silentFrames >= requiredSilence) {
+
+
+              console.log(
+                "🛑 USER FINISHED TALKING"
+              );
+
+              if (
+                this.mediaRecorder &&
+                this.mediaRecorder.state === "recording"
+              ) {
+
+                console.log("🛑 STOP USER AUDIO SESSION");
+
+                this.mediaRecorder.stop();
+
+              }
+
+
+              // Reset VAD completely
+              this.isSpeechActive = false;
+              this.consecutiveSpeechFrames = 0;
+              this.silentFrames = 0;
+
+              this.silentFrames = 0;
+
+              this.consecutiveSpeechFrames = 0;
+
+
+            }
+
+          }
+
+
+        }
+
+
       }, 100);
 
-    } catch (err) {
-      this.silenceDetectTimer = setTimeout(() => {
-        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') this.mediaRecorder.stop();
-      }, 5000);
+
     }
+    catch (err) {
+
+      console.error(
+        "VAD ERROR",
+        err
+      );
+
+    }
+
   }
 
   private stopVAD() {
@@ -729,29 +1308,75 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
     this.isSpeechActive = false;
   }
 
-  // ✅ Watchdog: if mic should be listening but recorder died, restart it
-  private startMicWatchdog() {
-    if (this.micWatchdog) return;
-    this.micWatchdog = setInterval(() => {
-      // ✅ Self-heal: isSpeaking stuck true with no audio actually playing → reset
-      if (this.isSpeaking && !this.currentAudio) {
-        this.speakingStuckCount = (this.speakingStuckCount || 0) + 1;
-        if (this.speakingStuckCount >= 2) {   // stuck for ~6 seconds
-          console.log('[Watchdog] isSpeaking stuck — force reset');
-          this.isSpeaking = false;
-          this.speakingStuckCount = 0;
-        }
-      } else {
-        this.speakingStuckCount = 0;
+  private restartRecordingAfterDelay() {
+
+    setTimeout(() => {
+
+
+      if (
+        this.isSpeaking ||
+        this.processingVoice
+      ) {
+
+        console.log(
+          "⏳ WAITING"
+        );
+
+        return;
+
       }
-      const shouldBeListening = this.micPermissionGranted && !this.micManuallyStopped
-        && !this.isSpeaking && !this.isTyping;
-      const isActuallyRecording = this.mediaRecorder && this.mediaRecorder.state === 'recording';
-      if (shouldBeListening && !isActuallyRecording) {
-        console.log('[Watchdog] Mic dead — restarting');
+
+
+
+      if (
+        this.recordingStream &&
+        this.recordingStream.active &&
+        !this.mediaRecorder
+      ) {
+
+        console.log(
+          "🔄 RESTART MIC"
+        );
+
+
         this.beginRecognition();
+
+
       }
+
+
+    }, 800);
+
+
+  }
+
+  private startMicWatchdog() {
+
+    if (this.micWatchdog)
+      return;
+
+
+    this.micWatchdog = setInterval(() => {
+
+      if (
+        this.voiceConversationStarted &&
+        !this.micManuallyStopped &&
+        this.recordingStream &&
+        this.recordingStream.active &&
+        !this.mediaRecorder &&
+        !this.isTyping
+      ) {
+
+        console.log(
+          "🎤 Watchdog restarting mic"
+        );
+
+        this.beginRecognition();
+
+      }
+
     }, 3000);
+
   }
 
   private stopMicWatchdog() {
@@ -761,132 +1386,266 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   private startSilenceCountdown() { }
   private resetSilenceTimer() { }
 
+
+
   private async processAudioWithWhisper() {
-    if (this.isSpeaking) { this.restartRecordingAfterDelay(); return; }
-    if (this.audioChunks.length === 0) { this.restartRecordingAfterDelay(); return; }
-    // ✅ Throttle: one whisper request at a time, minimum 1.5s gap
-    if (this.whisperInFlight) {
-      this.audioChunks = [];
-      this.restartRecordingAfterDelay();
-      return;
-    }
-    if (Date.now() - this.lastWhisperAt < 800) {
-      await new Promise(r => setTimeout(r, 800));
-    }
-    this.whisperInFlight = true;
-    this.lastWhisperAt = Date.now();
 
-    const mimeType = this.mediaRecorder?.mimeType || 'audio/webm';
-    const audioBlob = new Blob(this.audioChunks, { type: mimeType });
-    this.audioChunks = [];
+    console.log(
+      "🚀 WHISPER START"
+    );
 
-    // ✅ Reject noise blips — but NEVER throw away a big recording (real speech)
-    const speechDuration = this.speechStartedRecordingAt > 0
-      ? Date.now() - this.speechStartedRecordingAt - this.SPEECH_END_SILENCE_MS
-      : 0;
-    this.speechStartedRecordingAt = 0;
-    if (speechDuration < this.MIN_SPEECH_DURATION_MS && audioBlob.size < 25000) {
-      console.log('[VAD] Speech too short, ignored:', speechDuration, 'ms | size:', audioBlob.size);
-      this.whisperInFlight = false;
-      this.restartRecordingAfterDelay();
-      return;
-    }
-    if (audioBlob.size < 3000) { this.whisperInFlight = false; this.restartRecordingAfterDelay(); return; }
 
-    try {
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'audio.webm');
-      formData.append('ownerId', this.ownerId);
-      formData.append('selectedLanguage', this.selectedLanguage);
+    if (this.isSpeaking) {
 
-      const response = await axios.post(
-        'http://localhost:3000/api/ai/guest/whisper',
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+      console.log(
+        "🔇 AI SPEAKING IGNORE AUDIO"
       );
 
-      const transcript = response.data.text?.trim();
-      const detectedLanguage = response.data.language;
+      this.audioChunks = [];
 
-      if (!transcript) { this.restartRecordingAfterDelay(); return; }
+      return;
 
-      // ✅ Filter Whisper hallucinations (noise → fake YouTube phrases)
-      const hallucinations = [
-        'thanks for watching', "don't forget to subscribe", 'please subscribe',
-        'thank you for watching', 'see you next time', 'like and subscribe',
-        'ご視聴ありがとうございました', '字幕'
+    }
+
+
+    if (!this.audioChunks.length) {
+
+      console.log(
+        "🔇 NO AUDIO"
+      );
+
+      return;
+
+    }
+
+
+
+    const mimeType =
+      this.mediaRecorder?.mimeType || 'audio/webm';
+
+
+
+    const chunks = [
+      ...this.audioChunks
+    ];
+
+
+    this.audioChunks = [];
+
+
+
+    let audioBlob = new Blob(
+      chunks,
+      {
+        type: mimeType
+      }
+    );
+
+
+
+    console.log(
+      "🎧 ORIGINAL AUDIO SIZE:",
+      audioBlob.size
+    );
+
+
+
+    if (audioBlob.size < 1000) {
+
+      console.log(
+        "🔇 SMALL AUDIO IGNORE"
+      );
+
+      return;
+
+    }
+
+
+
+    try {
+
+
+      const formData = new FormData();
+
+
+      formData.append(
+        "audio",
+        audioBlob,
+        "audio.webm"
+      );
+
+
+      formData.append(
+        "ownerId",
+        this.ownerId
+      );
+
+
+      formData.append(
+        "selectedLanguage",
+        this.selectedLanguage
+      );
+
+
+
+      const response = await axios.post(
+
+        'http://localhost:3000/api/ai/guest/whisper',
+
+        formData,
+
+        {
+          headers: {
+            'Content-Type':
+              'multipart/form-data'
+          }
+        }
+
+      );
+
+
+
+      const transcript =
+        response.data.text?.trim();
+
+      console.log(
+        "✅ TRANSCRIPT READY:",
+        transcript
+      );
+      if (!transcript) {
+
+        console.log(
+          "🔇 EMPTY WHISPER RESULT"
+        );
+
+        setTimeout(() => {
+          this.beginRecognition(true);
+        }, 200);
+
+        return;
+      }
+      const blocked = [
+
+        "welcome",
+        "thank you",
+        "whatsapp marketing",
+        "website development",
+        "google ads",
+        "meta ads"
+
       ];
 
-      const lower = transcript.toLowerCase();
-      if (hallucinations.some(h => lower.includes(h))) {
-        console.log('[Whisper] Hallucination ignored:', transcript);
-        this.restartRecordingAfterDelay();
+
+
+      const lower =
+        transcript.toLowerCase();
+
+      if (
+        transcript.length < 40 &&
+        blocked.some(
+          x => lower === x
+        )
+      ) {
+
+        console.log(
+          "🔇 POSSIBLE ECHO:",
+          transcript
+        );
+
         return;
+
       }
 
-      // ✅ Reject URL-like hallucinations (Whisper noise pattern)
-      if (/www\.|https?:\/\/|\.com|\.uk|\.org/i.test(transcript)) {
-        console.log('[Whisper] URL hallucination ignored:', transcript);
-        this.restartRecordingAfterDelay();
-        return;
-      }
+      console.log(
+        "🚀 SENDING TO CHAT:",
+        transcript
+      );
 
-      // ✅ Reject unsupported languages (background TV noise etc.)
-      const supportedLangs = ['english', 'tamil', 'hindi', 'telugu', 'malayalam', 'kannada'];
-      if (detectedLanguage && !supportedLangs.includes(detectedLanguage)) {
-        console.log('[Whisper] Unsupported language ignored:', detectedLanguage);
-        this.restartRecordingAfterDelay();
-        return;
-      }
 
-      if (this.isEcho(transcript)) { this.restartRecordingAfterDelay(); return; }
-
-      const langMap: { [key: string]: string } = {
-        'english': 'en-IN', 'tamil': 'ta-IN', 'hindi': 'hi-IN',
-        'telugu': 'te-IN', 'malayalam': 'ml-IN', 'kannada': 'kn-IN',
-        'french': 'fr-FR', 'german': 'de-DE', 'spanish': 'es-ES',
-        'arabic': 'ar-SA', 'japanese': 'ja-JP', 'korean': 'ko-KR',
-        'chinese': 'zh-CN', 'sinhala': 'si-LK', 'urdu': 'ur-PK',
-      };
-      this.detectedLang = langMap[detectedLanguage] || 'en-IN';
-
-      this.userMessage = transcript;
-      this.cdr.detectChanges();
-
-      await this.sendMessageWithLang(transcript, detectedLanguage);
-
-    } catch (err) {
-      console.error('[Whisper] Transcription failed:', err);
-      this.restartRecordingAfterDelay();
-    } finally {
-      this.whisperInFlight = false;
+      await this.sendMessageWithLang(
+        transcript,
+        response.data.language
+      );
     }
+    catch (err) {
+
+      console.error(
+        "WHISPER ERROR",
+        err
+      );
+
+    }
+
   }
 
-  private restartRecordingAfterDelay() {
-    this.stopRecording(false);
-    if (this.micPermissionGranted && !this.micManuallyStopped && !this.isSpeaking) {
-      setTimeout(() => {
-        if (this.micPermissionGranted && !this.micManuallyStopped && !this.isSpeaking) {
-          this.beginRecognition();
-        }
-      }, 100);
-    }
-  }
+  private stopRecording(
+    killStream: boolean = false
+  ) {
 
-  private stopRecording(killStream: boolean = false) {
-    if (this.silenceDetectTimer) { clearTimeout(this.silenceDetectTimer); this.silenceDetectTimer = null; }
+
+    console.log(
+      "🛑 STOP RECORDING"
+    );
+
+
+
+    if (this.silenceDetectTimer) {
+
+      clearTimeout(
+        this.silenceDetectTimer
+      );
+
+      this.silenceDetectTimer = null;
+
+    }
+
+
+
     this.stopVAD();
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      try { this.mediaRecorder.onstop = null; this.mediaRecorder.stop(); } catch (e) { }
+
+
+
+    if (
+      this.mediaRecorder &&
+      this.mediaRecorder.state !== "inactive"
+    ) {
+
+      try {
+
+        this.mediaRecorder.stop();
+
+      }
+      catch (e) { }
+
     }
+
+
+
     this.mediaRecorder = null;
-    if (killStream && this.recordingStream) {
-      this.recordingStream.getTracks().forEach((t: any) => t.stop());
+
+
+
+    if (
+      killStream &&
+      this.recordingStream
+    ) {
+
+      this.recordingStream
+        .getTracks()
+        .forEach(
+          t => t.stop()
+        );
+
+
       this.recordingStream = null;
+
+      this.micPermissionGranted = false;
+
     }
     this.isListening = false;
     this.cdr.detectChanges();
+
+
   }
 
   stopVoiceInput() {
@@ -910,21 +1669,80 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
     return tanglishWords.some(w => t.includes(w));
   }
 
-  private isEcho(transcript: string): boolean {
-    if (!this.lastSpokenText) return false;
-    const clean = (s: string) => s.toLowerCase().replace(/[^\w\s]/g, '').trim();
-    const heard = clean(transcript);
-    const spoken = clean(this.lastSpokenText);
-    if (!heard) return false;
-    if (heard === spoken) return true;
-    if (heard.length >= 4 && spoken.includes(heard)) return true;
-    const heardWords = heard.split(/\s+/).filter(w => w.length > 2);
-    if (heardWords.length >= 3) {
-      const spokenWords = new Set(spoken.split(/\s+/));
-      const overlap = heardWords.filter(w => spokenWords.has(w)).length;
-      if (overlap / heardWords.length >= 0.5) return true;
+  private isEcho(text: string): boolean {
+
+    if (!text || !this.lastSpokenText) {
+      return false;
     }
+
+
+    const userText = text
+      .toLowerCase()
+      .trim();
+
+
+    const aiText = this.lastSpokenText
+      .toLowerCase()
+      .trim();
+
+
+
+    const userWords = userText.split(/\s+/);
+
+    const aiWords = aiText.split(/\s+/);
+
+
+
+    if (userWords.length < 5) {
+      return false;
+    }
+
+
+
+    let matched = 0;
+
+
+    for (const word of userWords) {
+
+      if (
+        aiWords.includes(word)
+      ) {
+
+        matched++;
+
+      }
+
+    }
+
+
+
+    const matchRatio =
+      matched / userWords.length;
+
+
+
+    // Block only when almost the complete sentence
+    // is copied from AI response
+
+    if (
+      matchRatio > 0.85 &&
+      userWords.length > 8
+    ) {
+
+      console.log(
+        "🔇 REAL ECHO BLOCKED:",
+        text
+      );
+
+
+      return true;
+
+    }
+
+
+
     return false;
+
   }
 
   // ✅ Fix 1: Stop current audio to prevent double voice
@@ -933,9 +1751,102 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
       this.currentAudio = null;
+      this.isSpeaking = false;
+
+      console.log("🛑 AI interrupted by user");
+
+      this.cdr.detectChanges();
     }
     this.speechRequestId++;
   }
+
+  private formatTTSNumbers(text: string): string {
+
+  const ones = [
+    "",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen"
+  ];
+
+  const tens = [
+    "",
+    "",
+    "twenty",
+    "thirty",
+    "forty",
+    "fifty",
+    "sixty",
+    "seventy",
+    "eighty",
+    "ninety"
+  ];
+
+
+  function numberToWords(num:number):string {
+
+    if(num < 20) {
+      return ones[num];
+    }
+
+    if(num < 100) {
+      return tens[Math.floor(num / 10)] +
+        (num % 10 ? " " + ones[num % 10] : "");
+    }
+
+    if(num < 1000) {
+      return ones[Math.floor(num / 100)] +
+        " hundred " +
+        (num % 100 ? numberToWords(num % 100) : "");
+    }
+
+    if(num < 100000) {
+      return numberToWords(Math.floor(num / 1000)) +
+        " thousand " +
+        (num % 1000 ? numberToWords(num % 1000) : "");
+    }
+
+    return num.toString();
+
+  }
+
+return text.replace(
+  /(?:Rs\.?|₹\s?|)(\d{1,3}(?:,\d{3})+|\d+)\s*(?:ரூபாய்|rupees)?/gi,
+  (match, num)=>{
+
+    const cleanNumber = Number(
+      num.replace(/,/g, '')
+    );
+
+    if(cleanNumber >= 1000){
+
+      return numberToWords(cleanNumber)
+        .trim() + " rupees";
+
+    }
+
+    return match;
+
+  }
+);
+
+}
 
   // ✅ Split text into chunks: first sentence separate, rest together
   private splitForTTS(text: string): string[] {
@@ -953,8 +1864,13 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       .then(res => `data:audio/mp3;base64,${res.data.audioContent}`);
   }
 
-  // ✅ Play one audio chunk, resolve when finished (with watchdog)
-  private playAudioSrc(src: string, myId: number, chunkText: string, onPlayStart?: (durationMs: number) => void): Promise<void> {
+private playAudioSrc(
+  src: string,
+  myId: number,
+  chunkText: string,
+  onPlayStart?: (durationMs: number) => void,
+  onVoiceStart?: () => void
+): Promise<void> {
     return new Promise((resolve) => {
       if (this.speechRequestId !== myId) { resolve(); return; }
 
@@ -979,14 +1895,30 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       };
 
       audio.play().then(() => {
-        // ✅ Typewriter: report the real audio duration the moment playback starts
-        if (onPlayStart) {
-          const durMs = (isFinite(audio.duration) && audio.duration > 0)
-            ? audio.duration * 1000
-            : Math.max(1500, chunkText.length * 80);
-          onPlayStart(durMs);
-        }
-      }).catch(() => {
+
+
+  // ✅ Voice actually started
+  if (onVoiceStart) {
+
+    onVoiceStart();
+
+  }
+
+
+  // Existing typewriter timing
+  if (onPlayStart) {
+
+    const durMs =
+      (isFinite(audio.duration) && audio.duration > 0)
+        ? audio.duration * 1000
+        : Math.max(1500, chunkText.length * 80);
+
+    onPlayStart(durMs);
+
+  }
+
+
+}).catch(() => {
         clearTimeout(watchdog);
         this.currentAudio = null;
         resolve();
@@ -994,232 +1926,492 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
     });
   }
 
-async speakReply(
-  text: string,
-  onEnd?: () => void,
-  skipVAD: boolean = false,
-  typeText: boolean = false
-) {
+  async speakReply(
+    text: string,
+    onEnd?: () => void,
+    skipVAD: boolean = false,
+    typeText: boolean = false
+  ) {
 
-  this.stopCurrentAudio();
-  this.stopTypewriter();
-  this.stopRecording(false);
+    this.stopCurrentAudio();
+    this.stopTypewriter();
 
-  // remaining existing code...
-    if (this.silenceTimer) { clearTimeout(this.silenceTimer); this.silenceTimer = null; }
     this.pendingTranscript = '';
-    this.isListening = false;
     this.lastSpokenText = text;
-    this.speechRequestId++;
-    const myId = this.speechRequestId;
-    this.synthesis?.cancel();
 
-    // ✅ Typewriter: the message bubble for this reply (created when voice starts)
+    this.speechRequestId++;
+
+    const myId = this.speechRequestId;
+
     let typedMsg: any = null;
 
-    // ✅ Start VAD during bot speech to detect user interruption (skipped for intro)
-    if (!skipVAD) {
-      if (this.recordingStream && this.recordingStream.active) {
-        this.startVAD(this.recordingStream);
-      } else if (this.micPermissionGranted) {
-        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-          .then(stream => {
-            this.recordingStream = stream;
-            this.startVAD(stream);
-          }).catch(() => { });
-      }
-    }
+    console.log(
+      skipVAD
+        ? "🔇 Intro voice - mic disabled"
+        : "🎧 AI reply"
+    );
 
-   try {
-  // speechText is only for voice
-  const chunks = this.splitForTTS(text);
-  const ttsPromises = chunks.map(c => this.fetchTTS(c));
+    try {
 
+      const chunks = this.splitForTTS(text);
+
+      const ttsPromises: Promise<any>[] = [];
+
+      ttsPromises.push(
+        this.fetchTTS(chunks[0])
+      );
       this.isSpeaking = true;
-      this.speechStartedAt = Date.now();
+
+
+      // ✅ During AI speech:
+      // Keep VAD active for interruption
+      // DO NOT start MediaRecorder (prevents AI echo going to Whisper)
+
+      if (!skipVAD && this.recordingStream) {
+
+        console.log(
+          "🎧 INTERRUPT LISTENER ACTIVE"
+        );
+
+
+        this.startVAD(this.recordingStream);
+        this.startInterruptBuffer(this.recordingStream);
+
+      }
+
+
+      this.updateVoiceStatus();
+
+
+
+      for (let i = 0; i < ttsPromises.length; i++) {
+
+
+        if (this.speechRequestId !== myId)
+          break;
+
+
+       if (!ttsPromises[i]) {
+
+  ttsPromises[i] =
+    this.fetchTTS(chunks[i]);
+
+}
+
+
+const src = await ttsPromises[i];
+
+
+// Start next TTS early
+if (
+  i + 1 < chunks.length &&
+  !ttsPromises[i + 1]
+) {
+
+  ttsPromises[i + 1] =
+    this.fetchTTS(chunks[i + 1]);
+
+}
+
+
+        if (typeText && !typedMsg)
+          typedMsg = this.beginTypedMessage();
+
+
+await this.playAudioSrc(
+  src,
+  myId,
+  chunks[i],
+
+  typeText
+    ?
+    (durMs) => {
+
+      this.typeChunkIntoMessage(
+        typedMsg,
+        chunks[i],
+        durMs
+      );
+
+    }
+    :
+    undefined,
+
+
+  // Voice started callback
+  () => {
+
+    if (
+      skipVAD &&
+      !this.messages.some(
+        m => m.text === text
+      )
+    ) {
+
+      this.addBotMessage(text);
+
       this.cdr.detectChanges();
 
-      // ✅ Play chunks in order — first chunk starts as soon as it's ready,
-      // while later chunks are still being generated
-      for (let i = 0; i < ttsPromises.length; i++) {
-        if (this.speechRequestId !== myId) break;
-        const src = await ttsPromises[i];
-        if (this.speechRequestId !== myId) break;
-        // ✅ Typewriter: create the empty bubble just before the voice starts
-        if (typeText && !typedMsg) typedMsg = this.beginTypedMessage();
-        const chunkText = chunks[i];
-        await this.playAudioSrc(src, myId, chunkText, typeText ? (durMs) => {
-          this.typeChunkIntoMessage(typedMsg, chunkText, durMs);
-        } : undefined);
-      }
-
-      // ✅ Typewriter: ALWAYS end with the full text visible (even if interrupted)
-      if (typeText) {
-        if (!typedMsg) typedMsg = this.beginTypedMessage();
-        this.finishTypedMessage(typedMsg, text);
-      }
-
-      // ✅ Finished all chunks (or was interrupted)
-      if (this.speechRequestId === myId) {
-        this.isSpeaking = false;
-        this.speechEndedAt = Date.now();
-        this.currentAudio = null;
-        this.cdr.detectChanges();
-        if (onEnd) onEnd();
-      }
-
-    } catch (err) {
-      console.error('[TTS] Failed:', err);
-      // ✅ Typewriter: TTS failed — still show the full text so it is never lost
-      if (typeText) {
-        if (!typedMsg) typedMsg = this.beginTypedMessage();
-        this.finishTypedMessage(typedMsg, text);
-      }
-      if (this.speechRequestId === myId) {
-        this.isSpeaking = false;
-        this.currentAudio = null;
-        this.cdr.detectChanges();
-        if (onEnd) onEnd();
-      }
     }
+
+  }
+
+);
+
+
+      }
+
+
+
+      if (typeText) {
+
+
+        if (!typedMsg)
+          typedMsg = this.beginTypedMessage();
+
+
+        this.finishTypedMessage(
+          typedMsg,
+          text
+        );
+
+
+      }
+
+
+
+      if (this.speechRequestId === myId) {
+
+
+        this.isSpeaking = false;
+
+        this.updateVoiceStatus();
+
+
+        if (onEnd)
+          onEnd();
+
+
+      }
+
+
+    }
+
+    catch (err) {
+
+
+      console.error(
+        "[TTS ERROR]",
+        err
+      );
+
+
+      this.isSpeaking = false;
+
+      this.updateVoiceStatus();
+
+
+      if (onEnd)
+        onEnd();
+
+
+    }
+
   }
 
   stopSpeaking() {
+
     this.stopCurrentAudio();
-    if (this.speakingWatchdog) clearTimeout(this.speakingWatchdog);
-    if (this.synthesis) this.synthesis.cancel();
+
+    if (this.speakingWatchdog)
+      clearTimeout(this.speakingWatchdog);
+
+    if (this.synthesis)
+      this.synthesis.cancel();
+
+
     this.isSpeaking = false;
-    this.speechEndedAt = Date.now();
+
     this.cdr.detectChanges();
-    this.autoStartListening();
+
+
+    if (
+      this.voiceConversationStarted &&
+      this.micPermissionGranted
+    ) {
+
+      console.log(
+        "🎤 Continue listening after interruption"
+      );
+
+      this.beginRecognition(true);
+
+    }
+
   }
 
-  private pendingVoiceMsg: string = '';
+  private async sendMessageWithLang(
+    msg: string,
+    whisperLang: string
+  ): Promise<void> {
 
-  private async sendMessageWithLang(msg: string, whisperLang: string): Promise<void> {
+    console.log(
+      "💬 CHAT FUNCTION START:",
+      msg
+    );
+
     if (!msg.trim()) return;
-    // ✅ If busy, QUEUE the message instead of dropping it
-    if (this.isTyping) {
-      console.log('[Queue] Busy — queuing voice message:', msg);
-      this.pendingVoiceMsg = msg;
-      return;
-    }
+
 
     this.userMessage = '';
-    this.quickRepliesDismissed = true;
     this.showQuickReplies = false;
     this.quickReplies = [];
+
     this.addUserMessage(msg);
+
     this.isTyping = true;
+    this.updateVoiceStatus();
+
     this.lastSpokenText = '';
+
     this.cdr.detectChanges();
 
-    // ✅ Safety: never let isTyping stay stuck more than 20s
-    setTimeout(() => {
-      if (this.isTyping) {
-        console.log('[Safety] isTyping stuck — resetting');
-        this.isTyping = false;
-        this.cdr.detectChanges();
-        this.autoStartListening();
-      }
-    }, 20000);
-
-    const langNameMap: { [key: string]: string } = {
-      'english': 'English', 'tamil': 'Tamil', 'hindi': 'Hindi',
-      'telugu': 'Telugu', 'malayalam': 'Malayalam', 'kannada': 'Kannada',
-      'french': 'French', 'german': 'German', 'spanish': 'Spanish',
-      'arabic': 'Arabic', 'japanese': 'Japanese', 'korean': 'Korean',
-      'chinese': 'Chinese', 'sinhala': 'Sinhala',
-    };
-    // ✅ Selected language ALWAYS wins — ignore whisperLang completely
-    const replyLang = this.selectedLanguageCode ? `name:${this.selectedLanguageCode}` : 'auto';
 
     try {
-      const res = await axios.post('http://localhost:3000/api/ai/guest/chat', {
-        ownerId: this.ownerId, guestId: this.guestId, guestName: this.guestName,
-        message: msg,
-        replyLang: replyLang,
-        whisperLang: undefined,
-      });
+
+      const replyLang =
+        this.selectedLanguageCode
+          ? `name:${this.selectedLanguageCode}`
+          : 'auto';
+
+      console.log(
+        "🚀 CHAT API START",
+        new Date().toLocaleTimeString()
+      );
+
+      const res = await axios.post(
+        'http://localhost:3000/api/ai/guest/chat',
+        {
+          ownerId: this.ownerId,
+          guestId: this.guestId,
+          guestName: this.guestName,
+          message: msg,
+          replyLang: replyLang
+        }
+      );
+
+      console.log(
+        "✅ CHAT API END",
+        new Date().toLocaleTimeString()
+      );
+
 
       const reply = res.data.reply;
-      this.isTyping = false;
-      // ✅ Typewriter: text appears word-by-word while the voice speaks
-      this.speakReply(reply, () => {
-        // ✅ Send queued message if one arrived while we were busy
-        if (this.pendingVoiceMsg) {
-          const queued = this.pendingVoiceMsg;
-          this.pendingVoiceMsg = '';
-          this.sendMessageWithLang(queued, '');
-        } else {
-          this.restartRecordingAfterDelay();
-        }
-      }, false, true);
-      this.cdr.detectChanges();
 
-    } catch (err) {
+
       this.isTyping = false;
-      this.addBotMessage('❌ Sorry, something went wrong. Please try again.');
-      this.speakReply('Sorry, something went wrong.', () => this.restartRecordingAfterDelay());
-      this.cdr.detectChanges();
+
+
+      this.updateVoiceStatus();
+      this.speakReply(
+        reply,
+        () => {
+
+          console.log("🎧 Reply finished - restarting mic");
+          console.log(
+            "🔄 MIC RESTART CALLBACK FIRED"
+          );
+
+          setTimeout(() => {
+
+            this.beginRecognition(true);
+
+          }, 200);
+
+        },
+        false,
+        true
+      );
+
+
     }
+
+    catch (err) {
+
+      console.error(err);
+
+
+      this.isTyping = false;
+
+
+      this.speakReply(
+        "Sorry, something went wrong.",
+        () => {
+          this.startVoiceInput();
+        }
+      );
+
+    }
+
+
+    this.cdr.detectChanges();
+
   }
 
   async sendMessage(): Promise<void> {
-    if (!this.userMessage.trim() || this.isTyping) return;
+
+    if (!this.userMessage.trim()) return;
+
 
     const msg = this.userMessage.trim();
+
     this.userMessage = '';
 
-    this.quickRepliesDismissed = true;
-    this.showQuickReplies = false;
-    this.quickReplies = [];
+
     this.addUserMessage(msg);
+
+
     this.isTyping = true;
-    this.cdr.detectChanges();
-    this.lastSpokenText = '';
 
-    // ✅ Safety: never let isTyping stay stuck more than 20s
-    setTimeout(() => {
-      if (this.isTyping) {
-        console.log('[Safety] isTyping stuck — resetting');
-        this.isTyping = false;
-        this.cdr.detectChanges();
-        this.autoStartListening();
-      }
-    }, 20000);
+    this.updateVoiceStatus();
 
-    if (this.recognition) { try { this.recognition.stop(); } catch (e) { } this.recognition = null; }
-    if (this.silenceTimer) { clearTimeout(this.silenceTimer); this.silenceTimer = null; }
-    this.pendingTranscript = '';
 
     try {
-      // ✅ Detect language from typed text first, fallback to selected language
-      // ✅ Always use selected language for typed messages
-      const msgLang = this.selectedLanguageCode ? `name:${this.selectedLanguageCode}` : 'auto';
 
-      const res = await axios.post('http://localhost:3000/api/ai/guest/chat', {
-        ownerId: this.ownerId, guestId: this.guestId, guestName: this.guestName,
-        message: msg, replyLang: msgLang
-      });
 
-      const reply = res.data.reply;
+      const replyLang =
+        this.selectedLanguageCode
+          ? `name:${this.selectedLanguageCode}`
+          : 'auto';
+
+
+
+      const res = await axios.post(
+
+        'http://localhost:3000/api/ai/guest/chat',
+
+        {
+          ownerId: this.ownerId,
+          guestId: this.guestId,
+          guestName: this.guestName,
+          message: msg,
+          replyLang: replyLang
+        }
+
+      );
+
+
+
       this.isTyping = false;
-      // ✅ Mic ON: typewriter text synced with voice. Mic OFF: text immediately, no voice
-      if (!this.micManuallyStopped) {
-        this.speakReply(reply, () => this.autoStartListening(), false, true);
-      } else {
-        this.addBotMessage(reply);
-      }
-      this.cdr.detectChanges();
 
-    } catch (err) {
-      this.addBotMessage('❌ Sorry, something went wrong. Please try again.');
-      this.isTyping = false;
-      this.cdr.detectChanges();
-      if (!this.micManuallyStopped) {
-        this.speakReply('Sorry, something went wrong. Please try again.', () => this.autoStartListening());
-      }
+      this.speakReply(
+
+        res.data.reply,
+
+        () => {
+
+          console.log("🎧 Reply finished - waiting for user");
+          console.log(
+            "🔄 MIC RESTART CALLBACK FIRED"
+          );
+
+          setTimeout(() => {
+
+            this.beginRecognition(true);
+
+          }, 200);
+
+        },
+
+        false,
+
+        true
+
+      );
+
+
+
     }
+
+    catch (error) {
+
+      this.isTyping = false;
+
+      this.addBotMessage(
+        "Sorry, something went wrong."
+      );
+
+    }
+
+
+    this.updateVoiceStatus();
+
+    this.cdr.detectChanges();
+
+  }
+
+  openVoiceMode() {
+
+    console.log("🎤 OPEN VOICE MODE");
+
+    this.isVoiceMode = true;
+    this.showFullVoiceScreen = true;
+
+    this.voiceStatusText = "Listening...";
+
+    this.cdr.detectChanges();
+
+    this.startVoiceInput();
+
+  }
+
+  closeVoiceMode() {
+
+    this.showFullVoiceScreen = false;
+
+    this.isVoiceMode = false;
+
+
+    this.stopVoiceInput();
+
+
+    this.voiceStatusText = '';
+
+
+    this.cdr.detectChanges();
+
+  }
+
+
+  updateVoiceStatus() {
+
+
+    if (this.isSpeaking) {
+
+      this.voiceStatusText = "Speaking...";
+
+    }
+
+    else if (this.isTyping) {
+
+      this.voiceStatusText = "Thinking...";
+
+    }
+
+    else if (this.isListening) {
+
+      this.voiceStatusText = "Listening...";
+
+    }
+
+    else {
+
+      this.voiceStatusText = "Tap microphone";
+
+    }
+
+
+    this.cdr.detectChanges();
+
   }
 }

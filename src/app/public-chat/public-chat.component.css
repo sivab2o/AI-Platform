@@ -97,6 +97,8 @@
 
 /* ✅ Chat */
 .chat-wrapper {
+    position: relative;
+    overflow: hidden;
     background: white;
     border-radius: 16px;
     width: 100%;
@@ -462,8 +464,8 @@
 
 /* ✅ Voice input button */
 .voice-input-btn {
-    background: #f0f4ff;
-    border: 1.5px solid #1e2673;
+    background: #DD1977;
+    /* border: 1.5px solid #DD1977; */
     color: #1e2673;
     width: 42px;
     height: 42px;
@@ -1019,4 +1021,510 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* ===============================
+   ChatGPT Style Voice Screen
+================================ */
+
+
+/* Listening animation */
+
+.voice-circle.listening {
+
+    animation:
+        listeningPulse 1.5s infinite;
+
+}
+
+
+/* Speaking animation */
+
+.voice-circle.speaking {
+
+    animation:
+        speakingPulse 0.8s infinite;
+
+}
+
+
+
+@keyframes listeningPulse {
+
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.12);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+
+}
+
+
+
+@keyframes speakingPulse {
+
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.25);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+
+}
+
+/* =====================================
+   Premium Voice Assistant UI
+===================================== */
+
+.voice-full-screen {
+
+    position: absolute;
+    inset: 0;
+
+    background:
+        linear-gradient(135deg,
+            #1e2673,
+            #DD1977);
+
+    z-index: 1000;
+
+    display: flex;
+    flex-direction: column;
+
+    justify-content: center;
+    align-items: center;
+
+    overflow: hidden;
+
+}
+
+
+
+/* Glow background */
+
+.voice-full-screen::before {
+
+    content: "";
+
+    position: absolute;
+
+    width: 350px;
+    height: 350px;
+
+    background:
+        radial-gradient(circle,
+            rgba(255, 255, 255, 0.25),
+            transparent 70%);
+
+    animation:
+        voiceGlow 3s infinite;
+
+}
+
+
+
+@keyframes voiceGlow {
+
+    0% {
+        transform: scale(0.8);
+        opacity: .5;
+    }
+
+
+    50% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+
+
+    100% {
+        transform: scale(0.8);
+        opacity: .5;
+    }
+
+}
+
+
+/* Mic icon */
+
+.voice-inner {
+
+    width: 100px;
+
+    height: 100px;
+
+
+    border-radius: 50%;
+
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+
+    font-size: 55px;
+
+
+    background:
+
+        linear-gradient(135deg,
+            #1e2673,
+            #DD1977);
+
+
+    box-shadow:
+
+        inset 0 0 20px rgba(255, 255, 255, .3);
+
+
+}
+
+
+
+
+
+/* Listening animation */
+
+.voice-circle.listening {
+
+
+    animation:
+
+        listeningAnimation 1.5s infinite;
+
+
+}
+
+
+
+
+@keyframes listeningAnimation {
+
+
+    0% {
+
+        transform: scale(1);
+
+        box-shadow:
+            0 0 0 0 rgba(221, 25, 119, .6);
+
+    }
+
+
+    70% {
+
+
+        transform: scale(1.05);
+
+
+        box-shadow:
+
+            0 0 0 35px rgba(221, 25, 119, 0);
+
+    }
+
+
+    100% {
+
+
+        transform: scale(1);
+
+
+    }
+
+
+}
+
+
+
+
+
+/* Speaking animation */
+
+.voice-circle.speaking {
+
+
+    animation:
+
+        speakingAnimation .8s infinite;
+
+}
+
+
+
+@keyframes speakingAnimation {
+
+
+    0% {
+
+        transform: scale(1);
+
+    }
+
+
+    50% {
+
+        transform: scale(1.15);
+
+    }
+
+
+    100% {
+
+        transform: scale(1);
+
+    }
+
+
+}
+
+.voice-title {
+
+    margin-top:30px;
+
+    color:white;
+
+    font-size:28px;
+
+    font-weight:700;
+
+}
+.voice-subtitle {
+
+
+    position: relative;
+
+    z-index: 2;
+
+
+    margin-top: 10px;
+
+
+    color: white;
+
+
+    opacity: .8;
+
+
+    font-size: 16px;
+
+
+}
+
+.voice-close {
+
+    position:absolute;
+
+    bottom:40px;
+
+    left:50%;
+
+    transform:translateX(-50%);
+
+    width:60px;
+
+    height:60px;
+
+    border-radius:50%;
+
+}
+
+/* ============================= */
+/* ChatGPT Style Voice Mode */
+/* Inside Chat Container Only */
+/* ============================= */
+
+.voice-mode-container {
+
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    background: #ffffff;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    align-items: center;
+
+    z-index: 50;
+
+}
+
+.voice-circle-wrapper {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+
+.voice-circle {
+
+    width: 180px;
+    height: 180px;
+
+    border-radius: 50%;
+
+    background: rgba(0,0,0,0.25);
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    overflow:hidden;
+
+}
+
+
+.voice-image {
+
+    width:100%;
+    height:100%;
+
+    object-fit:cover;
+
+    border-radius:50%;
+
+}
+
+.voice-circle.listening {
+
+    animation: pulseListen 1.5s infinite;
+
+}
+
+
+.voice-circle.speaking {
+
+    animation: pulseSpeak .8s infinite;
+
+}
+
+
+
+@keyframes pulseListen {
+
+
+    0% {
+
+        box-shadow:
+            0 0 0 0 rgba(59, 130, 246, .5);
+
+    }
+
+
+    70% {
+
+        box-shadow:
+            0 0 0 35px rgba(59, 130, 246, 0);
+
+    }
+
+
+    100% {
+
+        box-shadow:
+            0 0 0 0 rgba(59, 130, 246, 0);
+
+    }
+
+
+}
+
+
+
+@keyframes pulseSpeak {
+
+
+    0% {
+
+        transform: scale(1);
+
+    }
+
+
+    50% {
+
+        transform: scale(1.08);
+
+    }
+
+
+    100% {
+
+        transform: scale(1);
+
+    }
+
+
+}
+
+
+
+.voice-mode-container h2 {
+
+    margin-top: 30px;
+
+    font-size: 24px;
+
+    color: #111827;
+
+}
+
+
+.voice-mode-container p {
+
+    font-size: 16px;
+
+    color: #6b7280;
+
+}
+
+
+
+.voice-close {
+
+
+    position: absolute;
+
+    bottom: 40px;
+
+    width: 60px;
+
+    height: 60px;
+
+    border-radius: 50%;
+
+    border: none;
+
+    background: #ef4444;
+
+    color: white;
+
+    font-size: 28px;
+
+    cursor: pointer;
+
 }

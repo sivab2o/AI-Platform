@@ -181,13 +181,13 @@ export class DashboardComponent implements OnInit {
   this.emailError = '';
 
 
-  this.http.post<any>(
-    'http://localhost:3000/api/verify-business-email',
-    {
-      email: emailQuestion.value,
-      password: passwordQuestion.value
-    }
-  )
+this.http.post<any>(
+  'http://localhost:3000/api/ai/test-business-email',
+  {
+    email: emailQuestion.value,
+    password: passwordQuestion.value
+  }
+)
   .subscribe({
 
     next:(res:any)=>{

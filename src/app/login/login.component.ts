@@ -15,7 +15,7 @@ import { RouterModule } from '@angular/router';   // ✅ ADD THIS
 
 export class LoginComponent {
   email: string = '';
-  password: string = '';
+  password: string = ''; 
 
   constructor(private router: Router) { }
 
