@@ -34,8 +34,6 @@ const signup = (req, res) => {
 const login = (req, res) => {
   const { email, password } = req.body;
 
-
-
   // Check if user exists
   User.findByEmail(email, (err, results) => {
     if (err) return res.status(500).json({ error: 'Error fetching user' });

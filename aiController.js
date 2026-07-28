@@ -864,6 +864,11 @@ const guestChat = async (req, res) => {
                             ? `Address the customer by name "${guestName}" naturally — not in every message.`
                             : `Address the customer naturally without repeating their name.`;
 
+        // ✅ Off-topic rule — Yes means brief acknowledgment only, then redirect
+        // const offTopicRule = canOffTopic.toLowerCase() === 'yes'
+        //     ? `For off-topic questions (books, movies, general topics): give ONLY a very brief 5-10 word acknowledgment, then IMMEDIATELY redirect to business. NEVER give recommendations, reviews, or detailed answers about non-business topics.`
+        //     : `ONLY answer business-related questions. Redirect off-topic questions to business immediately.`;
+
         const offTopicRule = canOffTopic.toLowerCase() === 'yes'
             ? `
                 The AI is allowed to answer topics that are not related to the business.
@@ -909,11 +914,9 @@ const guestChat = async (req, res) => {
             + 'The customer may already have received your welcome message.\n'
             + 'Never say greetings like Hi, Hello, Vanakkam, or ask "how can I help?" when the customer has already asked a question or shown interest.\n'
             + 'If the customer mentions a product, service, price, requirement, or buying intention, directly answer and continue the sales conversation.\n'
-            + '\nRemember previous conversation always\n'
-            + 'Do NOT ask questions that were already answered earlier in this conversation.\n'
             + '\n## BUSINESS DATA\n'
             + combinedData
-            // ... rest of your existing prompt unchanged
+
             + '\n\n---'
             + '\nCustomer name: ' + (guestName || 'the customer')
             + '\n' + nameRule
