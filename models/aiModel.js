@@ -173,6 +173,9 @@ const AIModel = {
             g.name,
             g.mobile,
             g.summary,
+            g.expected_product,
+            g.expected_value,
+            g.expected_closing_date,
             g.interest_score,
             MAX(gc.created_at) as last_active,
             COUNT(gc.id) as total_messages,
@@ -221,6 +224,29 @@ const AIModel = {
         const sql = `UPDATE guests SET summary = ? WHERE id = ?`;
         db.query(sql, [summary, guestId], callback);
     },
+
+    updateGuestLeadDetails: (guestId, product, value, closingDate, callback) => {
+
+    const sql = `
+    UPDATE guests 
+    SET 
+        expected_product = ?,
+        expected_value = ?,
+        expected_closing_date = ?
+    WHERE id = ?
+    `;
+
+    db.query(
+        sql,
+        [
+            product,
+            value,
+            closingDate,
+            guestId
+        ],
+        callback
+    );
+},
 
     updateGuestScore: (guestId, score, callback) => {
         const sql = `UPDATE guests SET interest_score = ? WHERE id = ?`;

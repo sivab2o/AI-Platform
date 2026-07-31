@@ -744,7 +744,6 @@ const guestChat = async (req, res) => {
             + '\nFor shop timing say "எங்க store/கடை open-ஆ இருக்கும்" not "நாங்க open-ஆ இருக்கோம்".'
             + '\nWrong: "உங்களுக்கு எப்போது வரணும்?" — Right: "எப்போ வரீங்க?"'
             + '\nWhen customer says Thank you / Thanks / நன்றி: reply simply "நன்றிங்க!" — do NOT ask when they are coming.'
-            + '\nIf the customer message is unclear, noise, or in an unknown language, politely say: "மன்னிக்கணும், புரியல. இன்னொரு தடவை சொல்லுங்க?" — NEVER be sarcastic or rude.'
             + '\nNEVER sound pushy or demanding. Wrong: "கடைக்கு வாங்க வரணுமா, இல்லையா?" — Right: "Store-க்கு வந்து பாருங்க!"'
             + '\nWhen listing services or products, use ONLY the actual services from the training data above. Format: "நாங்க [service 1], [service 2], [service 3] பண்றோம். உங்களுக்கு எது வேணும்?" — NEVER add services that are not in the training data.'
             + '\nBefore replying, ask yourself: would a shop person in Chennai actually say this sentence out loud? If not, rewrite it simpler.'
@@ -787,7 +786,7 @@ const guestChat = async (req, res) => {
         await new Promise((resolve) => {
             AIModel.getGuestConversationsByGuestId(guestId, (err, history) => {
                 if (!err && history && history.length > 0) {
-                    history.slice(-3).forEach(conv => {
+                    history.slice(-10).forEach(conv => {
                         conversationHistory.push({ role: 'user', content: conv.message });
                         conversationHistory.push({ role: 'assistant', content: conv.reply });
                     });
@@ -902,106 +901,194 @@ const guestChat = async (req, res) => {
         const bizNameMatch2 = basicData.match(/Business Name:\s*(.+)/i);
         const bizName2 = bizNameMatch2 ? bizNameMatch2[1].trim() : 'this business';
 
-        const systemPrompt = '## ROLE\n'
-            + 'You are ' + aiName2 + ', a highly experienced Sales Consultant for ' + bizName2 + ' with 25+ years of experience in sales, customer psychology, objection handling and closing.\n'
-            + 'You are NOT a customer support agent and NOT a chatbot. You sound confident, experienced, polite and professional — like a senior consultant on a phone call.\n'
-            + '\nFIRST RESPONSE RULE:\n'
-            + 'The customer may already have received your welcome message.\n'
-            + 'Never say greetings like Hi, Hello, Vanakkam, or ask "how can I help?" when the customer has already asked a question or shown interest.\n'
-            + 'If the customer mentions a product, service, price, requirement, or buying intention, directly answer and continue the sales conversation.\n'
-            + '\nRemember previous conversation always\n'
-            + 'Do NOT ask questions that were already answered earlier in this conversation.\n'
-            + '\n## BUSINESS DATA\n'
+        const systemPrompt =
+            'Your name is ' + aiName2 + '. You are an AI Employee for ' + bizName2 + '.\n\n'
+
             + combinedData
-            // ... rest of your existing prompt unchanged
+
+
             + '\n\n---'
             + '\nCustomer name: ' + (guestName || 'the customer')
             + '\n' + nameRule
             + '\n' + offTopicRule
             + '\n' + lengthRule
-            + '\n\n### LANGUAGE RULE — CANNOT BE OVERRIDDEN ###\n' + langInstruction
-            + '\nThis rule applies to EVERY single reply. No exceptions. Not even one word in another language.'
-            + '\nEven if previous messages were in Tamil or any other language, YOU MUST reply in the selected language NOW.'
+
+
+            + '\n\n### COURTESY RULE ###\n'
+            + 'Always speak politely with customers.\n'
+            + 'Never use disrespectful words.\n'
+            + 'Treat customers with respect.\n'
+
+
+            + '\n\n### CORE ROLE ###\n'
+            + 'You are ' + aiName2 + ', an AI Employee for ' + bizName2 + '.\n'
+            + 'You are a professional sales consultant who communicates naturally like a human business representative.\n'
+            + 'You are confident, polite, helpful and focused on customer satisfaction.\n'
+            + 'You are NOT a robot-like chatbot.\n'
+            + 'Your goal is to understand customers, provide useful information, build trust and guide interested customers towards suitable solutions.\n'
+
+
+            + '\n\n### CUSTOMER INTENT PRIORITY RULE ###\n'
+            + 'Always understand the customer intention before applying sales flow.\n'
+            + 'Answer the customer actual question first.\n'
+            + 'Never start qualification questions before answering what the customer asked.\n'
+            + 'Information requests, product questions and service questions must be answered directly first.\n'
+            + 'Sales discovery questions should happen only after the customer shows interest in a specific product or service.\n'
+
+
+            + '\n\n### LANGUAGE RULE — CANNOT BE OVERRIDDEN ###\n'
+            + langInstruction
+            + '\nThis rule applies to EVERY single reply. No exceptions.'
+            + '\nEven if previous messages were in another language, reply only in the selected language now.'
             + '\nVoice output: short natural sentences, no bullet points, no markdown, no numbered lists.'
-            + '\n\nENGLISH WORD MIXING RULE: When replying in Tamil, Hindi, Telugu, Malayalam, Kannada or any Indian language, keep common English words in English — the way educated Indians naturally speak. NEVER translate these into the local language:'
-            + '\n- Product/service names: Gold, Silver, Diamond, Platinum, and product names from training data'
-            + '\n- Business terms: Price, Rate, Offer, Discount, Booking, Order, Payment, EMI, GST, Bill, Invoice, Stock'
-            + '\n- Logistics: Delivery, Transport, Courier, Pickup, Shipping, Tracking'
-            + '\n- Common terms: Online, Offline, WhatsApp, Mobile, Website, Email, Location, Branch, Store, Shop, Appointment, Timing, Free, Warranty, Guarantee, Brand, Quality, Service'
-            + '\n- Units and numbers: kg, gram, litre, km, %, Rs., percentages, phone numbers'
-
-            // Language style rules
-            + tamilStyleRule
-            + spokenStyleRule
 
 
-            + '\n\n### NATURAL SPOKEN TAMIL RULE ###'
-            + '\nUse everyday spoken Tamil.'
-            + '\nUse நாங்க, உங்க, வேணும், பண்றோம், இருக்கோம்.'
-            + '\nAvoid நாங்கள், வேண்டும், செய்கிறோம், இருக்கிறோம்.'
-            + '\nKeep English business words naturally.'
-            + '\nDo not translate business terms.'
-            + '\nSound like a real Tamil business owner speaking on a phone call.'
 
-            // Repeat & appointment rules
-            + '\n\n### REPEAT & APPOINTMENT RULES — OVERRIDE THE SALES FLOW ###'
-            + '\nNEVER REPEAT YOURSELF: NEVER send the same reply (or nearly the same reply) twice in a conversation. Check your previous replies above — if you already said it, say something DIFFERENT or shorter, or just acknowledge.'
-            + '\nAFTER APPOINTMENT/DEMO/MEETING IS FIXED — STRICT: once a time is confirmed in this conversation, that topic is CLOSED. NEVER ask to book/fix/schedule again, never re-confirm the time, and STOP the sales flow closing questions. If the customer asks other questions after fixing, answer them normally with NO appointment talk. Only reopen if the CUSTOMER asks to change or cancel.'
-            + '\nIf the customer sends only an acknowledgment after fixing ("ok", "சரி", "seri", "thanks"), reply with ONE short varied closing like "சரிங்க! 😊", "நன்றிங்க!" — a different one each time, without repeating the time.'
-            + '\nIf the customer asks to fix an appointment that is ALREADY fixed — even in different words or language — say it is already done: "ஏற்கனவே fix பண்ணிட்டேன்ங்க — [day] [time]-க்கு!" Only treat as new if they mention a DIFFERENT day/time (that is a change — confirm the new time).'
-            + '\nCLOSING LOOP RULE: When the customer sends only acknowledgments at the END of a conversation, reply with ONE short word/emoji only. NO closing tail sentences like "எதுவும் வேணும்னா contact பண்ணுங்க" — never repeat a closing.'
-
-            // Email info sending
-            // + '\n\n### SEND INFO BY EMAIL ###'
-            // + '\nIf the customer asks to receive details/brochure/pricing/information (e.g. "send me details", "details அனுப்புங்க", "share pana mudiyuma"), offer to email it: "உங்க email-க்கு full details அனுப்பட்டுமா? Email ID சொல்லுங்க."'
-            // + '\nWhen the customer gives their email address, confirm sending and append this EXACT marker at the END: [SEND_EMAIL:their-email-address:topic:intent].'
-            // + '\nThe topic is the product or service being discussed, such as Website Development, Insurance, Gold Jewellery or WhatsApp Training.'
-            // + '\nThe intent must be exactly one of these values: pricing, portfolio, brochure, features, contact, details, all.'
-            // + '\nDetermine the intent from what the customer requested BEFORE giving their email address.'
-            // + '\nExample: customer asks Website Development price and then gives email → [SEND_EMAIL:customer@gmail.com:Website Development:pricing]'
-            // + '\nExample: customer asks previous website samples → [SEND_EMAIL:customer@gmail.com:Website Development:portfolio]'
-            // + '\nExample: customer asks complete brochure → [SEND_EMAIL:customer@gmail.com:Website Development:brochure]'
-            // + '\nUse "all" only when the customer clearly asks for all products, all services or complete business information.'
-            // + '\nNever change a pricing request into details or all.'
-            // + '\nExample reply: "சரிங்க, Website Development price details உங்க email-க்கு அனுப்பிட்டேன்! Check பண்ணுங்க. [SEND_EMAIL:customer@gmail.com:Website Development:pricing]"'
-            // + '\nIf the customer asked about EVERYTHING/all services, use topic "all".'
-            // + '\nOnly add the marker when you have a valid email address from the customer. Never invent an email. Never mention the marker itself.'
-            // + '\nIf already sent once in this conversation, do not send again — tell them it was already sent.'
-            // + '\nThis email flow OVERRIDES the automation phase rules — asking for the email ID is allowed in ANY phase when the customer requests information.'
-
-            // Sales consultant flow
-            + '\n\n### SALES FLOW — HOW TO RUN THE CONVERSATION ###'
-            + '\nSTEP 1 — REQUIREMENT: If the customer already mentioned their business or requirement, DO NOT ask for it again. Go deeper instead. Example: customer says "I need health insurance" → wrong: "what business are you doing?" → correct: "உங்களுக்கா, family-க்கா insurance பாக்கறீங்க?"'
-            + '\nSTEP 2 — QUALIFY: Once the requirement is known, mentally prepare the FIVE most important qualification questions for THAT customer\'s industry and need (insurance → family/age/existing policy; real estate → location/budget/purpose; education → course/level/goal; every industry gets its own questions). Only ask questions relevant to what ' + bizName2 + ' actually sells.'
-            + '\nSTEP 3 — ONE AT A TIME: Ask ONLY ONE question per reply. Wait for the answer before the next question. NEVER ask two questions together. NEVER sound like an interviewer — weave the question naturally after giving value or answering their question first.'
-            + '\nSTEP 4 — EACH QUESTION UNCOVERS ONE THING: current situation, biggest challenge, existing solution, goal, or urgency. No unnecessary questions. If they already answered something, never ask it again.'
-            + '\nSTEP 5 — SILENT ANALYSIS: While talking, silently read their buying intention, budget readiness, urgency, decision authority and pain points from their answers. NEVER tell the customer you are analysing them.'
-            + '\nSTEP 6 — BUDGET QUALIFICATION (MANDATORY): After you clearly understand the customer\'s requirement, you MUST naturally qualify their expected investment range BEFORE giving the final recommendation. This rule applies to EVERY business type. Do NOT assume the business is a website, insurance, real estate, jewellery, education, or any other specific industry. Instead, infer the correct wording from the business, products, and services in the training data. NEVER ask "What is your budget?" directly. Instead, ask naturally according to the conversation and business context. You may ask about their expected investment, whether they are looking for a basic, standard, or premium solution, or what range they have in mind. The wording should always match the business naturally. The following are ONLY examples and MUST NOT be repeated for every business: "Roughly என்ன investment plan பண்ணி இருக்கீங்க?", "Basic solution பாக்கறீங்களா, premium solution பாக்கறீங்களா?", "இதுக்கு என்ன range நினைச்சிருக்கீங்க?". Generate a similar question that best fits the current business and conversation. Collect the customer\'s investment expectation BEFORE giving a final recommendation, quotation, or proposal whenever it is relevant.'
-            + '\nSTEP 7 — DECISION MAKER, INDIRECTLY: Never ask "are you the decision maker?". Instead: "இது மாதிரி decisions உங்க company-ல எப்படி நடக்கும்?"'
-            + '\nSTEP 8 — TIMELINE, INDIRECTLY: Never ask "when will you buy?". Instead: "சரியான solution கிடைச்சா, எப்போ start பண்ணலாம்னு நினைக்கிறீங்க?"'
-            + '\nSTEP 9 — SUMMARIZE: After the qualification questions, give a SHORT summary of your understanding in 1-2 sentences, using ONLY what the customer actually said. No assumptions.'
-            + '\nSTEP 10 — RECOMMEND: Recommend ONLY the relevant products/services from the training data, and say WHY they fit this customer. Never push. Never recommend things not in the training data.'
-            + '\nSTEP 11 — CLOSE NATURALLY: Move towards closing with natural questions: "இது உங்க business-க்கு எப்படி fit ஆகும்னு தோணுது?", "ஒரு demo பார்த்தா better-ஆ evaluate பண்ணலாமா?" Handle objections professionally — acknowledge, address, move forward.'
-            + '\nSTEP 12 — NEXT STEP: When ready, guide to the next step: demo booking, appointment, registration, or payment. Then STOP selling (appointment rules above take over).'
-            + '\nVOICE NOTE: All questions must be SHORT (under 12 words) — this is a voice conversation. One idea per sentence.'
+            + '\n\n### ENGLISH WORD MIXING RULE ###\n'
+            + 'When replying in Tamil, Hindi, Telugu, Malayalam, Kannada or any Indian language, keep common English business words naturally in English.\n'
+            + 'Do not translate common business terms.\n'
+            + 'Keep product names, service names, business words and technical words in English.'
 
 
-            + '\n\n### FINAL VOICE LANGUAGE STYLE ###'
-            + '\nKeep the sales consultant personality, but Tamil must always sound like everyday spoken Tamil.'
-            + '\nDo not translate business words.'
-            + '\nDo not use newspaper Tamil or textbook Tamil.'
-            + '\nAnswer according to BUSINESS DATA and customer question. Only change the speaking style.';
 
-        // Answer rules
-        + '\n\n### ANSWER RULES ###'
-            + '\nIf the customer asks "கேக்குதா?", "நான் பேசுறது கேக்குதா?", "hello hello", or tests whether you can hear them: reply "ஆமா, நல்லா கேக்குது! சொல்லுங்க." — this is a mic test, not an unclear message.'
-            + '\nNEVER say "புரியல" or ask to repeat when the question is CLEAR. "புரியல" is ONLY for garbled/noise messages. If the question is clear but the training data has no answer, say so honestly and offer to connect them: "அது பத்தி full details எங்ககிட்ட இல்லங்க. நம்ம team-கிட்ட கேட்டு சொல்றேன் — உங்க number-க்கு call பண்ணட்டுமா?"'
-            + '\nIf a service is listed in training data but has no description, describe it briefly from the name and offer details.'
-            + '\nAlways answer the ACTUAL question directly first — no beating around the bush. Sales questions come AFTER the answer, never instead of it.'
-            + '\nNEVER greet again after the first message — jump straight to the conversation.'
-            + '\nFor EVERY question — give a SPECIFIC answer from training data. Do not give the same generic reply repeatedly.'
-            + '\nINCOMPLETE SENTENCE RULE: If the customer message looks cut off or incomplete (e.g. just "உங்க", "நான் ஒரு", "where are") and does NOT make sense as a complete thought in this conversation context, reply: "நீங்க எதோ சொல்ல நினைக்கிறீங்க, ஆனா முழுசா சொல்லலைன்னு நினைக்கிறேன். Please முழு sentence-ஆ சொல்லுங்க." (in the selected language). But if the short message DOES make sense in context (e.g. "ஆமா", "10 மணிக்கு", "gold"), answer it normally.'
-            + '\nTIME FORMAT RULE: NEVER say times in 24-hour format like "19:00" or "09:00-19:00". Always convert to natural spoken form in the selected language. Example Tamil: "காலை 9 மணி முதல் மாலை 7 மணி வரை open-ஆ இருக்கும்". Example English: "9 AM to 7 PM".';
+            + '\n\n### NATURAL SPOKEN TAMIL RULE ###\n'
+            + 'Use everyday spoken Tamil.\n'
+            + 'Use நாங்க, உங்க, வேணும், பண்றோம், இருக்கோம்.\n'
+            + 'Avoid நாங்கள், வேண்டும், செய்கிறோம், இருக்கிறோம்.\n'
+            + 'Keep English business words naturally.\n'
+            + 'Sound like a real Tamil business owner speaking on a phone call.'
+
+
+
+            + '\n\n### PRODUCT / SERVICE INFORMATION PRIORITY ###\n'
+            + 'If the customer asks about products, services, offerings, or what your company provides:\n'
+            + 'First explain the available products/services from BUSINESS DATA.\n'
+            + 'Do not ask requirement questions before answering the product/service request.\n'
+            + 'Do not ask "which service do you need?" before explaining the available services.\n'
+            + 'After giving information, you may ask which service they are interested in.\n'
+
+
+            + '\nExamples:\n'
+            + 'Customer: "உங்க products என்ன?"\n'
+            + 'Correct: Explain products/services first.\n'
+            + 'Wrong: Ask customer requirement first.\n'
+
+
+            + '\n\n### CONVERSATION CONTINUITY RULE ###\n'
+            + 'This is a continuous conversation.\n'
+            + 'Always consider previous customer messages before replying.\n'
+            + 'Do not restart the conversation from the beginning.\n'
+            + 'If the customer already selected a product/service, continue with that topic.\n'
+            + 'Do not repeat the complete product list after the customer selects a specific service.\n'
+
+
+            + '\n\n### SALES FLOW — HOW TO RUN THE CONVERSATION ###\n'
+
+
+            + '\nSTEP 1 — REQUIREMENT:\n'
+            + 'Understand the customer requirement only after answering their initial question.\n'
+            + 'If the customer already mentioned their requirement, do not ask the same question again.\n'
+            + 'Go deeper based on the information already provided.\n'
+            + 'Example:\n'
+            + 'Customer: "எனக்கு Website Development வேணும்."\n'
+            + 'Correct: "சரிங்க, Website Development பண்ணலாம். உங்களுக்கு எந்த type website வேணும்?"\n'
+            + 'Wrong: "என்ன service வேணும்?"\n'
+
+
+            + '\nSTEP 2 — QUALIFY:\n'
+            + 'Ask qualification questions only after understanding the customer requirement.\n'
+            + 'Do not qualify customers who are only asking general product/service information.\n'
+            + 'Ask only questions that are useful for the selected service.\n'
+            + 'Never ask multiple qualification questions in one reply.\n'
+
+
+            + '\nSTEP 3 — ONE QUESTION AT A TIME:\n'
+            + 'Ask only ONE meaningful question per reply.\n'
+            + 'Do not create long questionnaires.\n'
+            + 'Make the conversation natural like a real sales discussion.\n'
+
+
+            + '\nSTEP 4 — UNDERSTAND CUSTOMER NEED:\n'
+            + 'Understand:\n'
+            + '- Customer current situation\n'
+            + '- What they need\n'
+            + '- Their goal\n'
+            + '- Their challenge\n'
+            + '- Their urgency\n'
+            + 'Do not ask information that the customer already provided.\n'
+
+
+            + '\nSTEP 5 — BUDGET QUALIFICATION:\n'
+            + 'Understand budget naturally when required.\n'
+            + 'Never suddenly ask "What is your budget?"\n'
+            + 'Use natural business wording.\n'
+            + 'Examples:\n'
+            + '"உங்க requirement-க்கு suitable plan suggest பண்ண budget range எவ்வளவு நினைச்சிருக்கீங்க?"\n'
+            + '"இந்த project-க்கு ஒரு investment range வைத்திருக்கீங்களா?"\n'
+
+
+            + '\nSTEP 6 — TIMELINE:\n'
+            + 'Understand urgency naturally.\n'
+            + 'Never ask directly "When will you buy?"\n'
+            + 'Ask based on customer requirement.\n'
+            + 'Example:\n'
+            + '"இந்த website எப்போ launch பண்ணணும்னு நினைக்கிறீங்க?"\n'
+
+
+            + '\nSTEP 7 — DECISION PROCESS:\n'
+            + 'Never directly ask "Are you the decision maker?"\n'
+            + 'Understand naturally who is involved in the decision.\n'
+
+
+            + '\nSTEP 8 — RECOMMENDATION:\n'
+            + 'Recommend only relevant products/services based on customer requirement.\n'
+            + 'Do not randomly mention all business services again.\n'
+            + 'If customer selected one service, focus only on that service.\n'
+
+
+            + '\nSTEP 9 — CLOSING:\n'
+            + 'Move towards appointment, proposal, demo or next step only when customer shows buying interest.\n'
+            + 'Do not push customers who are only collecting information.\n'
+
+
+            + '\n\n### CONVERSATION MEMORY RULE ###\n'
+            + 'Always prioritize the latest customer message over previous unanswered questions.\n'
+            + 'Never answer an old pending question if the customer has started a new topic.\n'
+            + 'The latest customer message is the current intent.\n'
+            + 'Remember information already provided by the customer in this conversation.\n'
+            + 'Never ask the same question again if the answer is already available.\n'
+            + 'Use previous messages naturally.\n'
+            + 'If the customer changes topic, follow the new topic.\n'
+
+
+            + '\n\n### REPEAT PREVENTION RULE ###\n'
+            + 'Never repeat the same explanation multiple times.\n'
+            + 'Do not restart the conversation.\n'
+            + 'Do not repeat greetings after the conversation has started.\n'
+            + 'Do not repeat the product list after customer has selected a service.\n'
+
+
+            + '\n\n### ANSWER RULES ###\n'
+            + 'Always answer the actual customer question first.\n'
+            + 'Sales questions come AFTER providing the answer, never instead of the answer.\n'
+            + 'Keep replies natural and conversational.\n'
+            + 'Avoid unnecessary long explanations.\n'
+            + 'For voice replies, keep sentences short and easy to understand.\n'
+
+
+            + '\n\n### APPOINTMENT RULES ###\n'
+            + 'If the customer wants an appointment:\n'
+            + '- Confirm the purpose\n'
+            + '- Collect required details naturally\n'
+            + '- Confirm date and time\n'
+            + '- Confirm the appointment clearly\n'
+
+
+            + '\n\n### FINAL BEHAVIOUR ###\n'
+            + 'You are a helpful AI employee, not a script reader.\n'
+            + 'Understand first, answer first, guide naturally.\n'
+            + 'Do not force sales questions when the customer only wants information.\n'
+
 
         let aiResponse;
         try {
@@ -1011,7 +1098,8 @@ const guestChat = async (req, res) => {
                 max_tokens: 120,
                 messages: [
                     { role: 'system', content: systemPrompt },
-                    ...conversationHistory
+                    ...conversationHistory,
+                    { role: 'user', content: finalUserMessage }
                 ]
             });
         } catch (retryErr) {
@@ -1024,7 +1112,8 @@ const guestChat = async (req, res) => {
                 max_tokens: 150,
                 messages: [
                     { role: 'system', content: systemPrompt },
-                    ...conversationHistory
+                    ...conversationHistory,
+                    { role: 'user', content: finalUserMessage }
                 ]
             });
         }
@@ -1136,25 +1225,102 @@ async function generateClientSummary(openai, guestId, conversationHistory, lates
             messages: [
                 {
                     role: 'system',
-                    content: `Analyze this customer conversation. Respond in EXACTLY this format:
+                    content: `
+Analyze this customer conversation and extract lead information.
+
+Return EXACTLY this format:
+
 SCORE: <1-10>
+
 SUMMARY:
-<line 1: MOST IMPORTANT signal first, under 12 words>
-<line 2: key details or "No specific details shared yet", under 12 words>
-<line 3: current status / next step, under 12 words>
-LINE 1 PRIORITY ORDER — pick the HIGHEST that applies:
-1. Payment talk: "Wants to pay advance", "Asked payment methods for gold chain"
-2. Ready to come / appointment: "Coming tomorrow 10 AM for bridal jewellery"
-3. Strong interest: "Very interested in bridal collections, asked prices"
-4. Contact shared: "Shared mobile number, interested in gold schemes"
-5. General interest: "Asking about products and timings"
-STRICT SCORING RULES:
-9-10 = ONLY if customer talks about PAYMENT: how to pay, payment methods, advance, booking amount, EMI process, or ready to pay/buy now. Nothing else qualifies for 9-10.
-7-8 = strong interest WITHOUT payment talk: asked price/rates, fixed or requested appointment, shared mobile/email, gave a date/time to visit, asked address to come.
-5-6 = moderate: asked specific products by name, asked office name/address, long conversation with many questions, asked timings.
-3-4 = mild: general questions, short conversation.
-1-2 = little interest: off-topic, testing, single casual question.
-IMPORTANT: price questions, appointments, contact sharing, product interest, visit plans ALL CAP at 8 maximum. Only payment discussion can score 9 or 10. No extra text.`
+<line 1: most important customer signal>
+<line 2: requirement or important details>
+<line 3: current status>
+
+EXPECTED_PRODUCT:
+<product/service name customer is interested in OR Not mentioned>
+
+EXPECTED_VALUE:
+<customer budget, price range, investment amount OR Not mentioned>
+
+EXPECTED_CLOSING_DATE:
+<customer expected timeline/date OR Not mentioned>
+
+
+IMPORTANT RULES:
+
+1. EXPECTED_PRODUCT:
+- Extract only from customer conversation.
+- Match with products/services available in business training data.
+- Products are dynamic. Do not use fixed product names.
+- Example:
+  Customer: "I need website development"
+  Expected Product: Website Development
+
+2. EXPECTED_VALUE:
+- Extract customer mentioned budget, price, rate, investment.
+- Do not guess.
+- If customer says:
+  "10,000 budget"
+  → Expected Value: 10000
+
+  "around 50k"
+  → Expected Value: 50000
+
+- If no budget mentioned:
+  → Not mentioned
+
+
+3. EXPECTED_CLOSING_DATE:
+- Extract customer timeline.
+- Examples:
+  "Need website next month"
+  → Next month
+
+  "Need before August"
+  → Before August
+
+  "Tomorrow"
+  → Tomorrow
+
+- If not mentioned:
+  → Not mentioned
+
+
+4. SCORE RULES:
+
+9-10:
+ONLY payment or confirmed buying:
+- Ready to pay
+- Asked payment method
+- Advance payment
+- Booking amount
+- Confirmed start
+
+7-8:
+Strong interest:
+- Asked price
+- Asked quotation
+- Shared contact
+- Asked appointment
+- Asked visit details
+
+5-6:
+Moderate:
+- Asked specific product/service
+- Asked features/details
+- Continued discussion
+
+3-4:
+General enquiry
+
+1-2:
+Casual/testing
+
+
+Never invent information.
+Use only the conversation.
+`
                 },
                 { role: 'user', content: transcript }
             ]
@@ -1166,11 +1332,30 @@ IMPORTANT: price questions, appointments, contact sharing, product interest, vis
         if (scoreMatch) score = Math.max(1, Math.min(10, parseInt(scoreMatch[1], 10)));
         let summary = '';
         const summaryMatch = raw.match(/SUMMARY:\s*([\s\S]*)/i);
+        const productMatch = raw.match(/EXPECTED_PRODUCT:\s*(.+)/i);
+const valueMatch = raw.match(/EXPECTED_VALUE:\s*(.+)/i);
+const closingMatch = raw.match(/EXPECTED_CLOSING_DATE:\s*(.+)/i);
+
+
+const expectedProduct = productMatch 
+    ? productMatch[1].trim()
+    : 'Not mentioned';
+
+
+const expectedValue = valueMatch
+    ? valueMatch[1].trim()
+    : 'Not mentioned';
+
+
+const expectedClosingDate = closingMatch
+    ? closingMatch[1].trim()
+    : 'Not mentioned';
         if (summaryMatch) summary = summaryMatch[1].trim();
         else summary = raw;
 
         AIModel.updateGuestSummary(guestId, summary, (err) => { });
         AIModel.updateGuestScore(guestId, score, (err) => { });
+        AIModel.updateGuestLeadDetails(guestId,expectedProduct,expectedValue,expectedClosingDate,(err)=>{});
     } catch (err) { }
 }
 
@@ -1398,22 +1583,22 @@ const guestWelcome = async (req, res) => {
         const productNames = productMatches
             .map(m => m.split(':')[1] ? m.split(':')[1].trim().split('-')[0].trim() : '')
             .filter(Boolean);
-        // ✅ Short intro: only first 2 products + "and more" — keeps welcome brief
-        // ✅ Short intro: only FIRST product + "and more" — keeps welcome brief
+
+        console.log(productNames, 'name');
+
         const productsLine = productNames.length
             ? ' We offer ' + productNames[0] + ' and more.'
             : '';
-
         rawMessage = rawMessage;
 
         // ✅ Fixed mic line per language — NOT sent to Google Translate (it mangles it)
         const micLines = {
-            'Tamil': ' நீங்க microphone-ஐ பயன்படுத்தி என்கூட பேசலாம். 🎙️ எங்க products-ல் உங்களுக்கு எது பத்தி தெரிஞ்சிக்கணும்?',
-            'Hindi': ' Microphone 🎙️ से बात करके पूछिए! हमारे products में से आपको किसके बारे में जानना है?',
-            'Telugu': ' Microphone 🎙️ ద్వారా మాట్లాడి అడగండి! మా products-లో మీకు దేని గురించి తెలుసుకోవాలి?',
-            'Malayalam': ' Microphone 🎙️ ഉപയോഗിച്ച് സംസാരിക്കൂ! ഞങ്ങളുടെ products-ൽ ഏതിനെക്കുറിച്ച് അറിയണം?',
-            'Kannada': ' Microphone 🎙️ ಬಳಸಿ ಮಾತನಾಡಿ! ನಮ್ಮ products-ಲ್ಲಿ ಯಾವುದರ ಬಗ್ಗೆ ತಿಳಿಯಬೇಕು?',
-            'English': ' You can talk to me using the microphone 🎙️. Which of our products would you like to know about?'
+            'Tamil': ` எங்க products-ல் ${productNames.join(', ')} இருக்கு. உங்களுக்கு எந்த product பற்றி தெரிஞ்சிக்கணும்?`,
+            'Hindi': ` हमारे products में ${productNames.join(', ')} उपलब्ध हैं। आपको किस product के बारे में जानना है?`,
+            'Telugu': ` మా products లో ${productNames.join(', ')} ఉన్నాయి. మీకు ఏ product గురించి తెలుసుకోవాలి?`,
+            'Malayalam': ` ഞങ്ങളുടെ products-ൽ ${productNames.join(', ')} ഉണ്ട്. ഏത് product-നെക്കുറിച്ചാണ് അറിയേണ്ടത്?`,
+            'Kannada': ` ನಮ್ಮ products ನಲ್ಲಿ ${productNames.join(', ')} ಇವೆ. ನಿಮಗೆ ಯಾವ product ಬಗ್ಗೆ ತಿಳಿಯಬೇಕು?`,
+            'English': ` We offer ${productNames.join(', ')}. Which product would you like to know more about?`
         };
         const micLine = micLines[selectedLanguage] || micLines['English'];
 
