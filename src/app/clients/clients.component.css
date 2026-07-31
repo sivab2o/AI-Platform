@@ -146,7 +146,8 @@
 }
 
 .clients-table {
-    width: 100%;
+   width: max-content;
+    min-width: 1400px;
     border-collapse: collapse;
     font-size: 14px;
 }
@@ -502,4 +503,45 @@ small {
 .lead-cold {
     background: #dbeafe;
     color: #2563eb;
+}
+
+/* Increase column widths */
+
+.clients-table th:nth-child(8),
+.clients-table td:nth-child(8) {
+    min-width: 130px;
+    width: 130px;
+    text-align: center;
+}
+
+/* Lead Type (Hot/Warm/Cold) */
+.clients-table th:nth-child(9),
+.clients-table td:nth-child(9) {
+    min-width: 120px;
+    width: 120px;
+    text-align: center;
+}
+
+/* Interest Score */
+.clients-table th:nth-child(8),
+.clients-table td:nth-child(8) {
+    min-width: 140px;
+}
+
+
+/* Badge size */
+.score-badge {
+    display: inline-block;
+    min-width: 70px;
+    text-align: center;
+    padding: 8px 14px;
+}
+
+
+/* Hot/Warm/Cold badge */
+.lead-badge {
+    display: inline-block;
+    min-width: 80px;
+    text-align: center;
+    padding: 7px 16px;
 }

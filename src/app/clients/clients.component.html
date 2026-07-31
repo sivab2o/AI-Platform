@@ -54,8 +54,11 @@
                         <th>Call Recommended</th>
                         <th>Last Active</th>
                         <th>Summary</th>
+                        <th>Expected Value</th>
+                        <th>Expected Product</th>
+                        <th>Expected Closing Date</th>
                         <th>Interest Score</th>
-                        <th>Lead Type</th>
+                        <th>AI Recommendation</th>
                         <th>Conversation</th>
                     </tr>
                 </thead>
@@ -101,6 +104,17 @@
                                 <p *ngFor="let line of client.summary.split('\n')">{{ line }}</p>
                             </div>
                             <span *ngIf="!client.summary" class="no-summary">No summary yet</span>
+                        </td>
+                        <td>
+                            {{ client.expected_value || '-' }}
+                        </td>
+
+                        <td>
+                            {{ client.expected_product || '-' }}
+                        </td>
+
+                        <td>
+                            {{ client.expected_closing_date || '-' }}
                         </td>
                         <td>
                             <span class="score-badge" [ngClass]="{
@@ -176,15 +190,53 @@
                 </div>
 
                 <div class="mobile-card-row">
-                    <span class="mobile-card-label">Lead Type</span>
-                     <span class="mobile-card-value">
-                    <span class="lead-badge mobile-card-value" [ngClass]="{
+
+                    <span class="mobile-card-label">
+                        Expected Value
+                    </span>
+
+                    <span class="mobile-card-value">
+                        {{client.expected_value || '-'}}
+                    </span>
+
+                </div>
+
+
+                <div class="mobile-card-row">
+
+                    <span class="mobile-card-label">
+                        Product
+                    </span>
+
+                    <span class="mobile-card-value">
+                        {{client.expected_product || '-'}}
+                    </span>
+
+                </div>
+
+
+                <div class="mobile-card-row">
+
+                    <span class="mobile-card-label">
+                        Closing Date
+                    </span>
+
+                    <span class="mobile-card-value">
+                        {{client.expected_closing_date || '-'}}
+                    </span>
+
+                </div>
+
+                <div class="mobile-card-row">
+                    <span class="mobile-card-label">AI Recommendation</span>
+                    <span class="mobile-card-value">
+                        <span class="lead-badge mobile-card-value" [ngClass]="{
         'lead-hot': getLeadType(client.interest_score) === 'Hot',
         'lead-warm': getLeadType(client.interest_score) === 'Warm',
         'lead-cold': getLeadType(client.interest_score) === 'Cold'
     }">
-                        {{ getLeadType(client.interest_score) }}
-                    </span>
+                            {{ getLeadType(client.interest_score) }}
+                        </span>
                     </span>
                 </div>
 

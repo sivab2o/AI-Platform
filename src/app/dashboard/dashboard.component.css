@@ -1908,3 +1908,23 @@
     border-radius:10px;
     border:1px solid #eee;
 }
+
+.section-heading {
+
+    margin-top:25px;
+    padding:12px 15px;
+
+    background:linear-gradient(
+        135deg,
+        #1e2673,
+        #DD1977
+    );
+
+    color:white;
+
+    border-radius:8px;
+
+    font-size:18px;
+    font-weight:600;
+
+}

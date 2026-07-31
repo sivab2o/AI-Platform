@@ -1,274 +1,231 @@
 <div class="public-chat-wrapper">
     <div class="chat-wrapper">
 
+
         <!-- Step 1: Guest Form -->
-        <div class="guest-form" *ngIf="collectingInfo && !showLangSelect && !formSubmitted && step === 'form'">
+        <div class="guest-form"
+            *ngIf="collectingInfo && !showLangSelect && !formSubmitted && step === 'form'">
 
             <div class="guest-form-body">
 
-                <p class="form-title">Welcome to {{businessName}}!</p>
+                <p class="form-title">
+                    Welcome to {{businessName}}!
+                </p>
+
 
                 <div class="form-group">
-                    <label>Full Name *</label>
-                    <input type="text" [(ngModel)]="guestName" placeholder="Enter your name" />
+
+                    <label>
+                        Full Name *
+                    </label>
+
+                    <input type="text"
+                        [(ngModel)]="guestName"
+                        placeholder="Enter your name" />
+
                 </div>
 
+
+
                 <div class="form-group">
-                    <label>Mobile Number *</label>
-                    <input type="tel" [(ngModel)]="guestMobile" placeholder="Enter 10-digit mobile number"
+
+                    <label>
+                        Mobile Number *
+                    </label>
+
+                    <input type="tel"
+                        [(ngModel)]="guestMobile"
+                        placeholder="Enter 10-digit mobile number"
                         maxlength="10" />
+
                 </div>
 
-                <button class="btn-start-chat" (click)="goToLangSelect()">
+
+
+                <button class="btn-start-chat"
+                    (click)="goToLangSelect()">
+
                     Next ➤
+
                 </button>
+
 
             </div>
 
         </div>
 
 
+
+
+
         <!-- Step 2: Language Selection -->
-        <div class="lang-select-screen" *ngIf="collectingInfo && showLangSelect">
+        <div class="lang-select-screen"
+            *ngIf="collectingInfo && showLangSelect">
+
 
             <div class="lang-select-body">
+
 
                 <div class="lang-icon">
                     🌐
                 </div>
 
+
                 <h3 class="lang-select-title">
+
                     Choose Your Language
+
                 </h3>
 
+
                 <p class="lang-select-sub">
+
                     Select the language you want to chat in
+
                 </p>
+
 
 
                 <div class="lang-grid">
 
-                    <button class="lang-card" *ngFor="let lang of languages" (click)="selectLanguage(lang)">
+
+                    <button class="lang-card"
+                        *ngFor="let lang of languages"
+                        (click)="selectLanguage(lang)">
+
+
 
                         <span class="lang-flag">
+
                             {{lang.flag}}
+
                         </span>
+
 
                         <span class="lang-name">
+
                             {{lang.name}}
+
                         </span>
 
+
                     </button>
+
 
                 </div>
 
 
-                <button class="btn-back-form" (click)="showLangSelect=false">
+
+                <button class="btn-back-form"
+                    (click)="showLangSelect=false">
+
 
                     ← Back
+
 
                 </button>
 
 
+
             </div>
+
 
         </div>
 
 
 
-        <!-- Step 3: Chat -->
+
+
+
+
+        <!-- Step 3: Voice Only Mode -->
         <ng-container *ngIf="!collectingInfo">
 
 
-            <!-- ========================= -->
-            <!-- CHATGPT STYLE VOICE MODE -->
-            <!-- ========================= -->
 
-            <div class="voice-full-screen" *ngIf="showFullVoiceScreen">
+            <div class="voice-full-screen"
+                *ngIf="showFullVoiceScreen">
+
 
 
                 <div class="voice-circle-wrapper">
 
-                    <div class="voice-circle" [class.listening]="isListening && !isSpeaking"
+
+
+                    <div class="voice-circle"
+                        [class.listening]="isListening && !isSpeaking"
                         [class.speaking]="isSpeaking">
+
+
 
                         <div class="voice-inner">
 
+
+
                             <!-- AI Speaking -->
-                            <img *ngIf="isSpeaking" src="assets/images/ai_anime.png" class="voice-image">
+
+                            <img *ngIf="isSpeaking"
+                                src="assets/images/ai_anime.png"
+                                class="voice-image">
+
+
+
 
 
                             <!-- AI Thinking -->
-                            <img *ngIf="isTyping && !isSpeaking" src="assets/images/think.png" class="voice-image">
+
+                            <img *ngIf="isTyping && !isSpeaking"
+                                src="assets/images/think.png"
+                                class="voice-image">
+
+
+
 
 
                             <!-- User Listening -->
-                            <img *ngIf="isListening && !isTyping && !isSpeaking" src="assets/images/mic.png"
+
+                            <img *ngIf="isListening && !isSpeaking"
+                                src="assets/images/mic.png"
                                 class="voice-image">
+
+
+
                         </div>
+
+
                     </div>
+
 
                 </div>
 
 
 
+
+
                 <h3 class="voice-title">
+
                     {{voiceStatusText}}
+
                 </h3>
 
 
-                <p class="voice-subtitle" *ngIf="isSpeaking">
-                   
+                <p class="voice-subtitle"
+                    *ngIf="isSpeaking">
+
                 </p>
 
 
-
-                <button class="voice-close" (click)="closeVoiceMode()">
+                <button class="voice-close"
+                    (click)="closeVoiceMode()">
 
                     ✕
 
                 </button>
 
-
             </div>
 
-
-
-
-
-
-            <!-- ========================= -->
-            <!-- NORMAL CHAT MODE -->
-            <!-- ========================= -->
-
-
-            <ng-container *ngIf="!showFullVoiceScreen">
-
-
-                <div class="chat-messages" #chatMessages>
-
-
-                    <ng-container *ngFor="let msg of messages">
-
-
-                        <!-- User message -->
-
-                        <div class="user-msg-wrapper" *ngIf="msg.sender === 'user'">
-
-
-                            <div class="user-msg">
-
-                                <p>
-                                    {{msg.text}}
-                                </p>
-
-                                <span class="msg-time">
-                                    {{msg.time}}
-                                </span>
-
-                            </div>
-
-
-                            <div class="avatar">
-                                👤
-                            </div>
-
-
-                        </div>
-
-
-
-
-                        <!-- Bot message -->
-
-                        <div class="bot-msg-wrapper" *ngIf="msg.sender === 'bot'">
-
-
-                            <div class="avatar">
-                                🤖
-                            </div>
-
-
-                            <div class="bot-msg">
-
-
-                                <p>
-                                    {{msg.text}}
-                                </p>
-
-
-                                <span class="msg-time">
-                                    {{msg.time}}
-                                </span>
-
-
-                            </div>
-
-
-                        </div>
-                    </ng-container>
-
-                    <!-- Quick Replies -->
-                    <div class="quick-replies-chat" *ngIf="showQuickReplies && quickReplies.length > 0">
-                        <p class="quick-label">
-                            💡 You can also ask:
-                        </p>
-                        <div class="quick-buttons">
-                            <button class="quick-btn" *ngFor="let q of quickReplies" (click)="sendQuickReply(q)">
-                                {{q}}
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Typing -->
-
-                    <div class="bot-msg-wrapper" *ngIf="isTyping">
-                        <div class="avatar">
-                            🤖
-                        </div>
-
-
-                        <div class="bot-msg typing">
-
-                            <span></span>
-                            <span></span>
-                            <span></span>
-
-                        </div>
-
-
-                    </div>
-
-                </div>
-
-                <!-- Chat Input -->
-
-                <div class="chat-input-box">
-                    <input type="text" [(ngModel)]="userMessage" (keyup.enter)="sendMessage()"
-                        placeholder="You can talk or type now..." [disabled]="isTyping" />
-                    <!-- Stop AI -->
-                    <button class="stop-speak-btn" *ngIf="isSpeaking" (click)="stopSpeaking()">
-                        🔊
-                    </button>
-
-                    <!-- Microphone -->
-
-                    <button class="voice-input-btn" (click)="openVoiceMode()" [disabled]="isTyping">
-                        🎤
-                    </button>
-                    <!-- Send -->
-
-                    <button class="send-btn" (click)="sendMessage()" [disabled]="isTyping || !userMessage.trim()">
-                        ➤
-                    </button>
-
-                    <!-- Close -->
-
-                    <button class="close-btn" (click)="closeChat()">
-                        ✕
-                    </button>
-                </div>
-            </ng-container>
         </ng-container>
+
     </div>
+
 </div>

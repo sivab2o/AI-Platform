@@ -60,7 +60,7 @@ export class ChatComponent implements OnInit, AfterViewChecked {
 
     const userId = this.user?.user_id;
 
-    axios.get(`http://localhost:3000/api/ai/conversations/${userId}`)
+    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/conversations/${userId}`)
       .then(res => {
         const data = Array.isArray(res.data) ? res.data : [];
 
@@ -92,7 +92,7 @@ export class ChatComponent implements OnInit, AfterViewChecked {
     this.cdr.detectChanges();
 
     try {
-      const res = await axios.post('http://localhost:3000/api/ai/chat', {
+      const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/chat', {
         userId: this.user.user_id,
         message: msg
       });

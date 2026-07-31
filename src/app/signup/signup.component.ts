@@ -22,7 +22,7 @@ export class SignupComponent {
 
   onSubmit() {
     // Send POST request to signup API endpoint
-   axios.post('http://localhost:3000/api/auth/signup', {
+   axios.post('https://aiemployeeplatform.leadsfactory.info/api/auth/signup', {
       name: this.name,
       email: this.email,
       mobile: this.mobile,

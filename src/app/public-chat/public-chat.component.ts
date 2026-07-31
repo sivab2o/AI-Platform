@@ -162,16 +162,25 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   }
 
   selectLanguage(lang: any) {
+
     this.selectedLanguage = lang.code;
     this.selectedLanguageCode = lang.name;
+
     this.showLangSelect = false;
     this.formSubmitted = true;
+
+    // Open voice screen immediately
+    this.showFullVoiceScreen = true;
+    this.isVoiceMode = true;
+    this.voiceStatusText = "Connecting...";
+
+    this.cdr.detectChanges();
+
     this.submitForm();
   }
 
   closeChat() {
     window.close();
-    // Fallback if window.close() blocked
     this.collectingInfo = true;
     this.showLangSelect = true;
     this.selectedLanguage = '';
@@ -195,7 +204,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       };
     }
 
-    axios.get(`http://localhost:3000/api/ai/owner/check/${this.ownerId}`)
+    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/owner/check/${this.ownerId}`)
       .then(res => {
         if (res.data.valid !== true) {
           this.step = 'invalid';
@@ -205,9 +214,9 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
             text: '❌ Invalid link. This AI assistant does not exist.',
             time: this.formatTime()
           });
-        }else {
-        this.businessName = res.data.business_name || 'our business';
-    }
+        } else {
+          this.businessName = res.data.business_name || 'our business';
+        }
       })
       .catch(() => {
         this.step = 'invalid';
@@ -328,13 +337,13 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   async submitForm() {
 
     try {
-      const checkRes = await axios.post('http://localhost:3000/api/ai/guest/check', {
+      const checkRes = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/check', {
         email: this.guestEmail, mobile: this.guestMobile, ownerId: this.ownerId
       });
 
       if (checkRes.data.exists) {
         this.guestId = checkRes.data.guestId;
-        const convRes = await axios.get(`http://localhost:3000/api/ai/guest/conversations/${this.guestId}`);
+        const convRes = await axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/guest/conversations/${this.guestId}`);
         const data = Array.isArray(convRes.data) ? convRes.data : [];
         if (data.length > 0) {
           data.forEach((c: any) => {
@@ -348,30 +357,45 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
         // ✅ Wait for welcome message first, then start mic after it finishes
         setTimeout(async () => {
           try {
-            const welcomeRes = await axios.post('http://localhost:3000/api/ai/guest/welcome', {
+            const welcomeRes = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/welcome', {
               ownerId: this.ownerId, guestId: this.guestId, guestName: this.guestName, returning: true,
               selectedLanguage: this.selectedLanguageCode
             });
             const welcomeMsg = welcomeRes.data.reply;
-            
+
             this.stopCurrentAudio();
             this.addBotMessage(welcomeMsg);
             this.speakReply(welcomeMsg, async () => {
 
-              console.log("🔇 INTRO FINISHED - MIC WAITING FOR USER CLICK");
+              console.log("🎤 INTRO FINISHED - STARTING LISTENING AUTOMATICALLY");
 
               this.isSpeaking = false;
               this.isListening = false;
-              this.voiceStatusText = "Tap microphone";
 
               this.mediaRecorder = null;
               this.isSpeechActive = false;
               this.pendingTranscript = '';
 
+              this.voiceConversationStarted = true;
+
+              this.voiceStatusText = "Listening...";
+
+              this.cdr.detectChanges();
+
+              setTimeout(() => {
+
+                this.requestMicPermissionOnce().then(() => {
+
+                  this.beginRecognition(true);
+
+                });
+
+              }, 500);
+
               const prods = welcomeRes.data.products || [];
 
               console.log(welcomeRes.data, 'prods');
-              
+
 
               if (prods.length) {
                 this.quickReplies = prods;
@@ -388,7 +412,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
         }, 300);
 
       } else {
-        const res = await axios.post('http://localhost:3000/api/ai/guest/register', {
+        const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/register', {
           name: this.guestName, email: '', mobile: this.guestMobile, ownerId: this.ownerId
         });
         this.guestId = res.data.guestId;
@@ -398,7 +422,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
         // ✅ Wait for welcome message first, then start mic after it finishes
         setTimeout(async () => {
           try {
-            const welcomeRes = await axios.post('http://localhost:3000/api/ai/guest/welcome', {
+            const welcomeRes = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/welcome', {
               ownerId: this.ownerId, guestId: this.guestId, guestName: this.guestName, returning: false,
               selectedLanguage: this.selectedLanguageCode
             });
@@ -407,15 +431,30 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
             this.addBotMessage(welcomeMsg);
             this.speakReply(welcomeMsg, async () => {
 
-              console.log("🔇 INTRO FINISHED - MIC WAITING FOR USER CLICK");
+              console.log("🎤 INTRO FINISHED - STARTING LISTENING AUTOMATICALLY");
 
               this.isSpeaking = false;
               this.isListening = false;
-              this.voiceStatusText = "Tap microphone";
 
               this.mediaRecorder = null;
               this.isSpeechActive = false;
               this.pendingTranscript = '';
+
+              this.voiceConversationStarted = true;
+
+              this.voiceStatusText = "Listening...";
+
+              this.cdr.detectChanges();
+
+              setTimeout(() => {
+
+                this.requestMicPermissionOnce().then(() => {
+
+                  this.beginRecognition(true);
+
+                });
+
+              }, 500);
 
               const prods = welcomeRes.data.products || [];
 
@@ -458,56 +497,56 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
     return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
   }
 
-private prepareTextForSpeech(text: string): string {
+  private prepareTextForSpeech(text: string): string {
 
 
-  const hourWords:any = {
-    "1":"one",
-    "2":"two",
-    "3":"three",
-    "4":"four",
-    "5":"five",
-    "6":"six",
-    "7":"seven",
-    "8":"eight",
-    "9":"nine",
-    "10":"ten",
-    "11":"eleven",
-    "12":"twelve"
-  };
+    const hourWords: any = {
+      "1": "one",
+      "2": "two",
+      "3": "three",
+      "4": "four",
+      "5": "five",
+      "6": "six",
+      "7": "seven",
+      "8": "eight",
+      "9": "nine",
+      "10": "ten",
+      "11": "eleven",
+      "12": "twelve"
+    };
 
 
-  // Convert 9 AM, 6 PM
-  text = text.replace(
-    /\b(\d{1,2})\s*(AM|PM|am|pm)\b/g,
-    (match, hour, period) => {
-
-      return `${hourWords[hour] || hour} ${period.toUpperCase()}`;
-
-    }
-  );
-
-
-  // Convert 9:30 AM, 1:00 PM
-  text = text.replace(
-    /\b(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)\b/g,
-    (match, hour, minute, period) => {
-
-      if(minute === "00"){
+    // Convert 9 AM, 6 PM
+    text = text.replace(
+      /\b(\d{1,2})\s*(AM|PM|am|pm)\b/g,
+      (match, hour, period) => {
 
         return `${hourWords[hour] || hour} ${period.toUpperCase()}`;
 
       }
-
-      return `${hourWords[hour] || hour} ${minute} ${period.toUpperCase()}`;
-
-    }
-  );
+    );
 
 
-  return text;
+    // Convert 9:30 AM, 1:00 PM
+    text = text.replace(
+      /\b(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)\b/g,
+      (match, hour, minute, period) => {
 
-}
+        if (minute === "00") {
+
+          return `${hourWords[hour] || hour} ${period.toUpperCase()}`;
+
+        }
+
+        return `${hourWords[hour] || hour} ${minute} ${period.toUpperCase()}`;
+
+      }
+    );
+
+
+    return text;
+
+  }
 
   addBotMessage(text: string): void {
     this.messages.push({ sender: 'bot', text, time: this.formatTime() });
@@ -565,7 +604,7 @@ private prepareTextForSpeech(text: string): string {
   async loadQuickReplies(): Promise<void> {
     if (this.quickRepliesDismissed) return;
     try {
-      const res = await axios.post('http://localhost:3000/api/ai/guest/suggestions', { ownerId: this.ownerId });
+      const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/suggestions', { ownerId: this.ownerId });
       this.allSuggestions = res.data.suggestions || [];
       this.quickReplies = [...this.allSuggestions];
       this.showQuickReplies = true;
@@ -587,7 +626,7 @@ private prepareTextForSpeech(text: string): string {
     try {
       // ✅ Always use selected language for quick replies
       const quickReplyLang = this.selectedLanguageCode ? `name:${this.selectedLanguageCode}` : this.detectTextLang(msg);
-      const res = await axios.post('http://localhost:3000/api/ai/guest/chat', {
+      const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/chat', {
         ownerId: this.ownerId, guestId: this.guestId, guestName: this.guestName,
         message: msg, replyLang: quickReplyLang
       });
@@ -1097,18 +1136,18 @@ private prepareTextForSpeech(text: string): string {
 
 
 
-         let speechStartFrames = 3;
+          let speechStartFrames = 3;
 
 
-// faster detection for short words
-if (!this.isSpeechActive) {
+          // faster detection for short words
+          if (!this.isSpeechActive) {
 
-    speechStartFrames = 2;
+            speechStartFrames = 2;
 
-}
+          }
 
 
-if(this.consecutiveSpeechFrames >= speechStartFrames){
+          if (this.consecutiveSpeechFrames >= speechStartFrames) {
 
 
             if (!this.isSpeechActive) {
@@ -1214,37 +1253,37 @@ if(this.consecutiveSpeechFrames >= speechStartFrames){
             this.silentFrames++;
 
 
-let requiredSilence = 12;
+            let requiredSilence = 12;
 
-const speechDuration =
-    Date.now() - this.speechStartedAt;
-
-
-// Short speech
-if (speechDuration < 2000) {
-
-    requiredSilence = 10;
-
-}
+            const speechDuration =
+              Date.now() - this.speechStartedAt;
 
 
-// Medium speech
-else if (speechDuration < 8000) {
+            // Short speech
+            if (speechDuration < 2000) {
 
-    requiredSilence = 15;
+              requiredSilence = 10;
 
-}
-
-
-// Long speech
-else {
-
-    requiredSilence = 20;
-
-}
+            }
 
 
-if(this.silentFrames >= requiredSilence) {
+            // Medium speech
+            else if (speechDuration < 8000) {
+
+              requiredSilence = 15;
+
+            }
+
+
+            // Long speech
+            else {
+
+              requiredSilence = 20;
+
+            }
+
+
+            if (this.silentFrames >= requiredSilence) {
 
 
               console.log(
@@ -1490,7 +1529,7 @@ if(this.silentFrames >= requiredSilence) {
 
       const response = await axios.post(
 
-        'http://localhost:3000/api/ai/guest/whisper',
+        'https://aiemployeeplatform.leadsfactory.info/api/ai/guest/whisper',
 
         formData,
 
@@ -1762,91 +1801,91 @@ if(this.silentFrames >= requiredSilence) {
 
   private formatTTSNumbers(text: string): string {
 
-  const ones = [
-    "",
-    "one",
-    "two",
-    "three",
-    "four",
-    "five",
-    "six",
-    "seven",
-    "eight",
-    "nine",
-    "ten",
-    "eleven",
-    "twelve",
-    "thirteen",
-    "fourteen",
-    "fifteen",
-    "sixteen",
-    "seventeen",
-    "eighteen",
-    "nineteen"
-  ];
+    const ones = [
+      "",
+      "one",
+      "two",
+      "three",
+      "four",
+      "five",
+      "six",
+      "seven",
+      "eight",
+      "nine",
+      "ten",
+      "eleven",
+      "twelve",
+      "thirteen",
+      "fourteen",
+      "fifteen",
+      "sixteen",
+      "seventeen",
+      "eighteen",
+      "nineteen"
+    ];
 
-  const tens = [
-    "",
-    "",
-    "twenty",
-    "thirty",
-    "forty",
-    "fifty",
-    "sixty",
-    "seventy",
-    "eighty",
-    "ninety"
-  ];
+    const tens = [
+      "",
+      "",
+      "twenty",
+      "thirty",
+      "forty",
+      "fifty",
+      "sixty",
+      "seventy",
+      "eighty",
+      "ninety"
+    ];
 
 
-  function numberToWords(num:number):string {
+    function numberToWords(num: number): string {
 
-    if(num < 20) {
-      return ones[num];
+      if (num < 20) {
+        return ones[num];
+      }
+
+      if (num < 100) {
+        return tens[Math.floor(num / 10)] +
+          (num % 10 ? " " + ones[num % 10] : "");
+      }
+
+      if (num < 1000) {
+        return ones[Math.floor(num / 100)] +
+          " hundred " +
+          (num % 100 ? numberToWords(num % 100) : "");
+      }
+
+      if (num < 100000) {
+        return numberToWords(Math.floor(num / 1000)) +
+          " thousand " +
+          (num % 1000 ? numberToWords(num % 1000) : "");
+      }
+
+      return num.toString();
+
     }
 
-    if(num < 100) {
-      return tens[Math.floor(num / 10)] +
-        (num % 10 ? " " + ones[num % 10] : "");
-    }
+    return text.replace(
+      /(?:Rs\.?|₹\s?|)(\d{1,3}(?:,\d{3})+|\d+)\s*(?:ரூபாய்|rupees)?/gi,
+      (match, num) => {
 
-    if(num < 1000) {
-      return ones[Math.floor(num / 100)] +
-        " hundred " +
-        (num % 100 ? numberToWords(num % 100) : "");
-    }
+        const cleanNumber = Number(
+          num.replace(/,/g, '')
+        );
 
-    if(num < 100000) {
-      return numberToWords(Math.floor(num / 1000)) +
-        " thousand " +
-        (num % 1000 ? numberToWords(num % 1000) : "");
-    }
+        if (cleanNumber >= 1000) {
 
-    return num.toString();
+          return numberToWords(cleanNumber)
+            .trim();
 
-  }
+        }
 
-return text.replace(
-  /(?:Rs\.?|₹\s?|)(\d{1,3}(?:,\d{3})+|\d+)\s*(?:ரூபாய்|rupees)?/gi,
-  (match, num)=>{
+        return match;
 
-    const cleanNumber = Number(
-      num.replace(/,/g, '')
+      }
     );
 
-    if(cleanNumber >= 1000){
-
-      return numberToWords(cleanNumber)
-        .trim() + " rupees";
-
-    }
-
-    return match;
-
   }
-);
-
-}
 
   // ✅ Split text into chunks: first sentence separate, rest together
   private splitForTTS(text: string): string[] {
@@ -1860,17 +1899,17 @@ return text.replace(
   // ✅ Fetch TTS audio for one chunk
   private fetchTTS(text: string): Promise<string> {
     const language = this.selectedLanguage || 'english';
-    return axios.post('http://localhost:3000/api/ai/tts', { text, language })
+    return axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/tts', { text, language })
       .then(res => `data:audio/mp3;base64,${res.data.audioContent}`);
   }
 
-private playAudioSrc(
-  src: string,
-  myId: number,
-  chunkText: string,
-  onPlayStart?: (durationMs: number) => void,
-  onVoiceStart?: () => void
-): Promise<void> {
+  private playAudioSrc(
+    src: string,
+    myId: number,
+    chunkText: string,
+    onPlayStart?: (durationMs: number) => void,
+    onVoiceStart?: () => void
+  ): Promise<void> {
     return new Promise((resolve) => {
       if (this.speechRequestId !== myId) { resolve(); return; }
 
@@ -1897,28 +1936,28 @@ private playAudioSrc(
       audio.play().then(() => {
 
 
-  // ✅ Voice actually started
-  if (onVoiceStart) {
+        // ✅ Voice actually started
+        if (onVoiceStart) {
 
-    onVoiceStart();
+          onVoiceStart();
 
-  }
-
-
-  // Existing typewriter timing
-  if (onPlayStart) {
-
-    const durMs =
-      (isFinite(audio.duration) && audio.duration > 0)
-        ? audio.duration * 1000
-        : Math.max(1500, chunkText.length * 80);
-
-    onPlayStart(durMs);
-
-  }
+        }
 
 
-}).catch(() => {
+        // Existing typewriter timing
+        if (onPlayStart) {
+
+          const durMs =
+            (isFinite(audio.duration) && audio.duration > 0)
+              ? audio.duration * 1000
+              : Math.max(1500, chunkText.length * 80);
+
+          onPlayStart(durMs);
+
+        }
+
+
+      }).catch(() => {
         clearTimeout(watchdog);
         this.currentAudio = null;
         resolve();
@@ -1936,8 +1975,12 @@ private playAudioSrc(
     this.stopCurrentAudio();
     this.stopTypewriter();
 
+    // ✅ Convert numbers before sending to TTS
+    text = this.formatTTSNumbers(text);
+
     this.pendingTranscript = '';
     this.lastSpokenText = text;
+
 
     this.speechRequestId++;
 
@@ -1991,72 +2034,72 @@ private playAudioSrc(
           break;
 
 
-       if (!ttsPromises[i]) {
+        if (!ttsPromises[i]) {
 
-  ttsPromises[i] =
-    this.fetchTTS(chunks[i]);
+          ttsPromises[i] =
+            this.fetchTTS(chunks[i]);
 
-}
-
-
-const src = await ttsPromises[i];
+        }
 
 
-// Start next TTS early
-if (
-  i + 1 < chunks.length &&
-  !ttsPromises[i + 1]
-) {
+        const src = await ttsPromises[i];
 
-  ttsPromises[i + 1] =
-    this.fetchTTS(chunks[i + 1]);
 
-}
+        // Start next TTS early
+        if (
+          i + 1 < chunks.length &&
+          !ttsPromises[i + 1]
+        ) {
+
+          ttsPromises[i + 1] =
+            this.fetchTTS(chunks[i + 1]);
+
+        }
 
 
         if (typeText && !typedMsg)
           typedMsg = this.beginTypedMessage();
 
 
-await this.playAudioSrc(
-  src,
-  myId,
-  chunks[i],
+        await this.playAudioSrc(
+          src,
+          myId,
+          chunks[i],
 
-  typeText
-    ?
-    (durMs) => {
+          typeText
+            ?
+            (durMs) => {
 
-      this.typeChunkIntoMessage(
-        typedMsg,
-        chunks[i],
-        durMs
-      );
+              this.typeChunkIntoMessage(
+                typedMsg,
+                chunks[i],
+                durMs
+              );
 
-    }
-    :
-    undefined,
+            }
+            :
+            undefined,
 
 
-  // Voice started callback
-  () => {
+          // Voice started callback
+          () => {
 
-    if (
-      skipVAD &&
-      !this.messages.some(
-        m => m.text === text
-      )
-    ) {
+            if (
+              skipVAD &&
+              !this.messages.some(
+                m => m.text === text
+              )
+            ) {
 
-      this.addBotMessage(text);
+              this.addBotMessage(text);
 
-      this.cdr.detectChanges();
+              this.cdr.detectChanges();
 
-    }
+            }
 
-  }
+          }
 
-);
+        );
 
 
       }
@@ -2190,7 +2233,7 @@ await this.playAudioSrc(
       );
 
       const res = await axios.post(
-        'http://localhost:3000/api/ai/guest/chat',
+        'https://aiemployeeplatform.leadsfactory.info/api/ai/guest/chat',
         {
           ownerId: this.ownerId,
           guestId: this.guestId,
@@ -2288,7 +2331,7 @@ await this.playAudioSrc(
 
       const res = await axios.post(
 
-        'http://localhost:3000/api/ai/guest/chat',
+        'https://aiemployeeplatform.leadsfactory.info/api/ai/guest/chat',
 
         {
           ownerId: this.ownerId,
@@ -2367,19 +2410,16 @@ await this.playAudioSrc(
 
   closeVoiceMode() {
 
-    this.showFullVoiceScreen = false;
+    window.location.reload();
+    // this.showFullVoiceScreen = false;
 
-    this.isVoiceMode = false;
+    // this.isVoiceMode = false;
 
+    // this.stopVoiceInput();
 
-    this.stopVoiceInput();
+    // this.voiceStatusText = '';
 
-
-    this.voiceStatusText = '';
-
-
-    this.cdr.detectChanges();
-
+    // this.cdr.detectChanges();
   }
 
 

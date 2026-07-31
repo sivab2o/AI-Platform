@@ -182,7 +182,7 @@ export class DashboardComponent implements OnInit {
 
 
 this.http.post<any>(
-  'http://localhost:3000/api/ai/test-business-email',
+  'https://aiemployeeplatform.leadsfactory.info/api/ai/test-business-email',
   {
     email: emailQuestion.value,
     password: passwordQuestion.value
@@ -269,6 +269,7 @@ this.http.post<any>(
 
       if (userData) {
         this.user = JSON.parse(userData);
+        
         this.loadTrainingData();
         this.loadQuestions();
         this.loadDashboardStats();
@@ -359,7 +360,7 @@ this.http.post<any>(
 
     this.masterTrainingText = (this.masterTrainingText || '') + htmlContent;
 
-    axios.post('http://localhost:3000/api/ai/train/master', {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train/master', {
       userId: this.user.user_id,
       masterData: this.masterTrainingText
     }).then(() => {
@@ -445,7 +446,7 @@ this.http.post<any>(
     const formData = new FormData();
     formData.append('file', file);
 
-    axios.post('http://localhost:3000/api/ai/extract-file', formData, {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/extract-file', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }).then(res => {
       const text = res.data.text || '';
@@ -479,7 +480,7 @@ this.http.post<any>(
     this.cdr.detectChanges();
 
     try {
-      const res = await axios.post('http://localhost:3000/api/ai/fetch-url', {
+      const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/fetch-url', {
         url: this.websiteUrl
       });
 
@@ -521,7 +522,7 @@ this.http.post<any>(
     const formData = new FormData();
     formData.append('file', file);
 
-    axios.post('http://localhost:3000/api/ai/extract-file', formData, {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/extract-file', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }).then(res => {
       const text = res.data.text || '';
@@ -590,7 +591,7 @@ this.http.post<any>(
 
   loadTrainingData() {
     const userId = this.user?.user_id;
-    axios.get(`http://localhost:3000/api/ai/train/${userId}`)
+    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/train/${userId}`)
       .then(res => {
         if (res.data && res.data.training_data) {
           this.originalTrainingText = res.data.training_data;
@@ -609,7 +610,7 @@ this.http.post<any>(
 
   loadDashboardStats() {
     const userId = this.user?.user_id;
-    axios.get(`http://localhost:3000/api/ai/dashboard/stats/${userId}`)
+    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/dashboard/stats/${userId}`)
       .then(res => {
         this.totalConversations = res.data.totalConversations;
         this.totalClients = res.data.totalClients;
@@ -627,6 +628,7 @@ this.http.post<any>(
       // ✅ AI Identity
       { id: 'ai_employee_name', section: 'AI Identity', question: 'AI Employee Name', fieldType: 'text', options: [], mandatory: true, placeholder: 'Example: Kavi / Meena / AI Sales Assistant', value: '' },
       { id: 'ai_employee_gender', section: 'AI Identity', question: 'AI Employee Gender', fieldType: 'radio', options: ['Male', 'Female', 'Neutral'], mandatory: true, placeholder: '', value: '' },
+      { id: 'ai_goal', section: 'AI Identity', question: 'AI Goal', fieldType: 'textarea', options: [], mandatory: true,placeholder: 'Example: Generate leads, answer customer questions, explain products, collect customer details, book appointments',value: ''},
       { id: 'customer_addressing_style', section: 'AI Identity', question: 'How should the AI address customers?', fieldType: 'dropdown', options: ['Friend', 'Boss', 'Thalaivare', 'Dear Customer', 'By Customer Name'], mandatory: true, placeholder: '', value: '' },
       { id: 'ai_introduction_script', section: 'AI Identity', question: 'AI Introduction Script', fieldType: 'textarea', options: [], mandatory: true, placeholder: 'Hi, I am {AI Name}, AI Assistant for {Company Name}. How can I help you today?', value: '' },
       { id: 'can_suggest_tips', section: 'AI Identity', question: 'Can AI suggest starting tips to customers?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: true, placeholder: '', value: 'Yes' },
@@ -1009,7 +1011,7 @@ this.http.post<any>(
     this.originalTrainingText = this.trainingText;
     this.showQuestionnaire = false;
 
-    axios.post('http://localhost:3000/api/ai/train', {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train', {
 
       userId: this.user.user_id,
       name: this.user.name,
@@ -1071,7 +1073,7 @@ this.http.post<any>(
   }
 
   copyLink() {
-    const link = `http://localhost:3000/user/${this.user.user_id}`;
+    const link = `https://aiemployeeplatform.leadsfactory.info/user/${this.user.user_id}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(link).then(() => {
         Swal.fire({ icon: 'success', title: 'Link Copied!', timer: 1000, showConfirmButton: false, confirmButtonColor: '#DD1977' });
@@ -1104,7 +1106,7 @@ this.http.post<any>(
     if (!this.trainingText.trim()) { alert('Please enter training data'); return; }
     const dataToSave = this.trainingText;
     this.originalTrainingText = this.trainingText;
-    axios.post('http://localhost:3000/api/ai/train', {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train', {
       userId: this.user.user_id, name: this.user.name, email: this.user.email,
       mobile: this.user.mobile, trainingData: dataToSave
     }).then(() => {
@@ -1121,7 +1123,7 @@ this.http.post<any>(
     if (!this.masterTrainingText || !this.masterTrainingText.trim()) {
       alert('Please enter master training data'); return;
     }
-    axios.post('http://localhost:3000/api/ai/train/master', {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train/master', {
       userId: this.user.user_id, masterData: this.masterTrainingText
     }).then(() => {
       this.showTrainBox = false;
@@ -1143,7 +1145,7 @@ this.http.post<any>(
     if (!this.trainingText.trim()) { alert('Please enter training data'); return; }
     this.isExpanded = false;
     this.originalTrainingText = this.trainingText;
-    axios.post('http://localhost:3000/api/ai/train', {
+    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train', {
       userId: this.user.user_id, name: this.user.name, email: this.user.email,
       mobile: this.user.mobile, trainingData: this.trainingText
     }).then(() => {

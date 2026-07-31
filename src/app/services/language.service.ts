@@ -93,7 +93,7 @@ export class LanguageService {
   }
 
   async translateAndCache(lang: string): Promise<void> {
-    const res = await axios.post('http://localhost:3000/api/ai/translate', {
+    const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/translate', {
       texts: this.allTexts,
       targetLang: lang
     });
@@ -128,7 +128,7 @@ export class LanguageService {
     }
 
     // ✅ Not cached — call API
-    const res = await axios.post('http://localhost:3000/api/ai/translate', {
+    const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/translate', {
       texts,
       targetLang: lang
     });
