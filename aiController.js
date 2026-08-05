@@ -105,12 +105,24 @@ const testBusinessEmailConnection = async (req, res) => {
 
         const transporter = nodemailer.createTransport({
 
+            host: "smtp.gmail.com",
 
-            service: 'gmail',
+            port: 587,
+
+            secure: false,
 
             auth: {
-                user: businessEmail.trim(),
-                pass: cleanPassword
+
+                user: businessEmail,
+
+                pass: appPassword
+
+            },
+
+            tls: {
+
+                rejectUnauthorized: false
+
             }
 
         });
