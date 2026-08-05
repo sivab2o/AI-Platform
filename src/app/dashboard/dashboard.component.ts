@@ -138,7 +138,7 @@ export class DashboardComponent implements OnInit {
     return Math.round(((this.currentSectionIndex + 1) / this.sections.length) * 100);
   }
 
-  
+
   isCheckboxSelected(q: TrainingQuestion, opt: string): boolean {
     return Array.isArray(q.value) && q.value.includes(opt);
   }
@@ -161,68 +161,85 @@ export class DashboardComponent implements OnInit {
 
   verifyBusinessEmail(q: any) {
 
-  const emailQuestion = this.questions.find(
-    x => x.id === 'business_email'
-  );
+    const emailQuestion = this.questions.find(
+      x => x.id === 'business_email'
+    );
 
-  const passwordQuestion = this.questions.find(
-    x => x.id === 'business_app_password'
-  );
-
-
-  if (!emailQuestion?.value || !passwordQuestion?.value) {
-    this.emailError = 'Business Gmail and App Password are required';
-    this.emailVerified = false;
-    return;
-  }
+    const passwordQuestion = this.questions.find(
+      x => x.id === 'business_app_password'
+    );
 
 
-  this.isEmailVerifying = true;
-  this.emailError = '';
-
-
-this.http.post<any>(
-  'https://aiemployeeplatform.leadsfactory.info/api/ai/test-business-email',
-  {
-    email: emailQuestion.value,
-    password: passwordQuestion.value
-  }
-)
-  .subscribe({
-
-    next:(res:any)=>{
-
-      this.isEmailVerifying = false;
-
-      if(res.success){
-
-        this.emailVerified = true;
-        this.emailError = '';
-
-      }else{
-
-        this.emailVerified = false;
-        this.emailError =
-        'Invalid Gmail or App Password. Please check Google App Password.';
-
-      }
-
-    },
-
-
-    error:()=>{
-
-      this.isEmailVerifying=false;
-      this.emailVerified=false;
-
-      this.emailError =
-      'Invalid Gmail or App Password. Please check Google App Password.';
-
+    if (!emailQuestion?.value || !passwordQuestion?.value) {
+      this.emailError = 'Business Gmail and App Password are required';
+      this.emailVerified = false;
+      return;
     }
 
-  });
 
-}
+    this.isEmailVerifying = true;
+    this.emailError = '';
+
+    console.log(
+      "VERIFY EMAIL:",
+      emailQuestion.value
+    );
+
+    console.log(
+      "VERIFY PASSWORD:",
+      passwordQuestion.value.replace(/\s/g, ''),
+    );
+
+    console.log(
+      "PASSWORD LENGTH:",
+      passwordQuestion.value.replace(/\s/g, '').length
+    );
+
+    this.http.post<any>(
+      'https://aiemployeeplatform.leadsfactory.info/api/ai/test-business-email',
+      {
+        email: emailQuestion.value.trim(),
+
+        password: passwordQuestion.value
+          .replace(/\s/g, '')
+          .trim()
+      }
+    )
+      .subscribe({
+
+        next: (res: any) => {
+
+          this.isEmailVerifying = false;
+
+          if (res.success) {
+
+            this.emailVerified = true;
+            this.emailError = '';
+
+          } else {
+
+            this.emailVerified = false;
+            this.emailError =
+              'Invalid Gmail or App Password. Please check Google App Password.';
+
+          }
+
+        },
+
+
+        error: () => {
+
+          this.isEmailVerifying = false;
+          this.emailVerified = false;
+
+          this.emailError =
+            'Invalid Gmail or App Password. Please check Google App Password.';
+
+        }
+
+      });
+
+  }
 
   isAllQuestionsValid(): boolean {
 
@@ -269,7 +286,7 @@ this.http.post<any>(
 
       if (userData) {
         this.user = JSON.parse(userData);
-        
+
         this.loadTrainingData();
         this.loadQuestions();
         this.loadDashboardStats();
@@ -628,7 +645,7 @@ this.http.post<any>(
       // ✅ AI Identity
       { id: 'ai_employee_name', section: 'AI Identity', question: 'AI Employee Name', fieldType: 'text', options: [], mandatory: true, placeholder: 'Example: Kavi / Meena / AI Sales Assistant', value: '' },
       { id: 'ai_employee_gender', section: 'AI Identity', question: 'AI Employee Gender', fieldType: 'radio', options: ['Male', 'Female', 'Neutral'], mandatory: true, placeholder: '', value: '' },
-      { id: 'ai_goal', section: 'AI Identity', question: 'AI Goal', fieldType: 'textarea', options: [], mandatory: true,placeholder: 'Example: Generate leads, answer customer questions, explain products, collect customer details, book appointments',value: ''},
+      { id: 'ai_goal', section: 'AI Identity', question: 'AI Goal', fieldType: 'textarea', options: [], mandatory: true, placeholder: 'Example: Generate leads, answer customer questions, explain products, collect customer details, book appointments', value: '' },
       { id: 'customer_addressing_style', section: 'AI Identity', question: 'How should the AI address customers?', fieldType: 'dropdown', options: ['Friend', 'Boss', 'Thalaivare', 'Dear Customer', 'By Customer Name'], mandatory: true, placeholder: '', value: '' },
       { id: 'ai_introduction_script', section: 'AI Identity', question: 'AI Introduction Script', fieldType: 'textarea', options: [], mandatory: true, placeholder: 'Hi, I am {AI Name}, AI Assistant for {Company Name}. How can I help you today?', value: '' },
       { id: 'can_suggest_tips', section: 'AI Identity', question: 'Can AI suggest starting tips to customers?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: true, placeholder: '', value: 'Yes' },
@@ -655,7 +672,7 @@ this.http.post<any>(
         fieldType: 'password',
         options: [],
         mandatory: false,
-        placeholder: 'Enter 16 character Google App Password',
+        placeholder: 'xxxx xxxx xxxx xxxx',
         value: ''
       },
 
@@ -1026,6 +1043,7 @@ this.http.post<any>(
         (this.questions.find(x => x.id === 'business_app_password')?.value || '')
           .replace(/\s/g, '')
 
+
     }).then(() => {
       this.isTrained = true;
       Swal.fire({
@@ -1070,6 +1088,7 @@ this.http.post<any>(
       }
 
     });
+
   }
 
   copyLink() {
@@ -1106,9 +1125,46 @@ this.http.post<any>(
     if (!this.trainingText.trim()) { alert('Please enter training data'); return; }
     const dataToSave = this.trainingText;
     this.originalTrainingText = this.trainingText;
+
+
+    const businessEmail =
+      this.questions.find(x => x.id === 'business_email')?.value || '';
+
+    const businessAppPassword =
+      (
+        this.questions.find(x => x.id === 'business_app_password')?.value || ''
+      )
+        .replace(/\s/g, '');
+
+
+
+    console.log("BUSINESS EMAIL:", businessEmail);
+
+    console.log("APP PASSWORD:", businessAppPassword);
+
+    console.log("PASSWORD LENGTH:", businessAppPassword.length);
+    console.log("FINAL TRAIN DATA:", {
+      businessEmail: businessEmail,
+      businessAppPassword: businessAppPassword,
+      passwordLength: businessAppPassword.length
+    });
+
     axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train', {
-      userId: this.user.user_id, name: this.user.name, email: this.user.email,
-      mobile: this.user.mobile, trainingData: dataToSave
+
+      userId: this.user.user_id,
+
+      name: this.user.name,
+
+      email: this.user.email,
+
+      mobile: this.user.mobile,
+
+      trainingData: dataToSave,
+
+      businessEmail: businessEmail,
+
+      businessAppPassword: businessAppPassword
+
     }).then(() => {
       this.isTrained = true; this.isEditing = false;
       this.showTrainBox = false; this.showQuestionnaire = false;

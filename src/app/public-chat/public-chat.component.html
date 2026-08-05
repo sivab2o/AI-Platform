@@ -3,8 +3,7 @@
 
 
         <!-- Step 1: Guest Form -->
-        <div class="guest-form"
-            *ngIf="collectingInfo && !showLangSelect && !formSubmitted && step === 'form'">
+        <div class="guest-form" *ngIf="collectingInfo && !showLangSelect && !formSubmitted && step === 'form'">
 
             <div class="guest-form-body">
 
@@ -19,9 +18,7 @@
                         Full Name *
                     </label>
 
-                    <input type="text"
-                        [(ngModel)]="guestName"
-                        placeholder="Enter your name" />
+                    <input type="text" [(ngModel)]="guestName" placeholder="Enter your name" />
 
                 </div>
 
@@ -33,17 +30,14 @@
                         Mobile Number *
                     </label>
 
-                    <input type="tel"
-                        [(ngModel)]="guestMobile"
-                        placeholder="Enter 10-digit mobile number"
+                    <input type="tel" [(ngModel)]="guestMobile" placeholder="Enter 10-digit mobile number"
                         maxlength="10" />
 
                 </div>
 
 
 
-                <button class="btn-start-chat"
-                    (click)="goToLangSelect()">
+                <button class="btn-start-chat" (click)="goToLangSelect()">
 
                     Next ➤
 
@@ -59,8 +53,7 @@
 
 
         <!-- Step 2: Language Selection -->
-        <div class="lang-select-screen"
-            *ngIf="collectingInfo && showLangSelect">
+        <div class="lang-select-screen" *ngIf="collectingInfo && showLangSelect">
 
 
             <div class="lang-select-body">
@@ -89,9 +82,7 @@
                 <div class="lang-grid">
 
 
-                    <button class="lang-card"
-                        *ngFor="let lang of languages"
-                        (click)="selectLanguage(lang)">
+                    <button class="lang-card" *ngFor="let lang of languages" (click)="selectLanguage(lang)">
 
 
 
@@ -116,8 +107,7 @@
 
 
 
-                <button class="btn-back-form"
-                    (click)="showLangSelect=false">
+                <button class="btn-back-form" (click)="showLangSelect=false">
 
 
                     ← Back
@@ -132,19 +122,40 @@
 
         </div>
 
+        <!-- Email Request Box -->
+
+<div class="email-box"
+     *ngIf="showEmailBox">
 
 
+    <h3>
+        Enter your email address
+    </h3>
 
 
+    <input
+        type="email"
+        [(ngModel)]="customerEmail"
+        placeholder="example@gmail.com"
+    />
 
+
+    <button
+        (click)="submitCustomerEmail()">
+
+        Send Details
+
+    </button>
+
+
+</div>
 
         <!-- Step 3: Voice Only Mode -->
         <ng-container *ngIf="!collectingInfo">
 
 
 
-            <div class="voice-full-screen"
-                *ngIf="showFullVoiceScreen">
+            <div class="voice-full-screen" *ngIf="showFullVoiceScreen">
 
 
 
@@ -152,8 +163,7 @@
 
 
 
-                    <div class="voice-circle"
-                        [class.listening]="isListening && !isSpeaking"
+                    <div class="voice-circle" [class.listening]="isListening && !isSpeaking"
                         [class.speaking]="isSpeaking">
 
 
@@ -164,9 +174,7 @@
 
                             <!-- AI Speaking -->
 
-                            <img *ngIf="isSpeaking"
-                                src="assets/images/ai_anime.png"
-                                class="voice-image">
+                            <img *ngIf="isSpeaking" src="assets/images/ai_anime.png" class="voice-image">
 
 
 
@@ -174,9 +182,7 @@
 
                             <!-- AI Thinking -->
 
-                            <img *ngIf="isTyping && !isSpeaking"
-                                src="assets/images/think.png"
-                                class="voice-image">
+                            <img *ngIf="isTyping && !isSpeaking" src="assets/images/think.png" class="voice-image">
 
 
 
@@ -184,9 +190,7 @@
 
                             <!-- User Listening -->
 
-                            <img *ngIf="isListening && !isSpeaking"
-                                src="assets/images/mic.png"
-                                class="voice-image">
+                            <img *ngIf="isListening && !isSpeaking" src="assets/images/mic.png" class="voice-image">
 
 
 
@@ -209,14 +213,12 @@
                 </h3>
 
 
-                <p class="voice-subtitle"
-                    *ngIf="isSpeaking">
+                <p class="voice-subtitle" *ngIf="isSpeaking">
 
                 </p>
 
 
-                <button class="voice-close"
-                    (click)="closeVoiceMode()">
+                <button class="voice-close" (click)="closeVoiceMode()">
 
                     ✕
 

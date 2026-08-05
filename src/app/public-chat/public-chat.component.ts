@@ -29,7 +29,12 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   guestEmail: string = '';
   guestMobile: string = '';
   guestId: string = '';
-
+  showEmailBox: boolean = false;
+  emailSentSuccessfully = false;
+  customerEmail: string = '';
+  emailForDetails: string = '';
+  lastCustomerMessage: string = '';
+  waitingForEmail: boolean = false;
   isVoiceMode: boolean = false;
 
   showFullVoiceScreen: boolean = false;
@@ -177,6 +182,67 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
     this.cdr.detectChanges();
 
     this.submitForm();
+  }
+
+  async sendDetailsEmail() {
+
+    const email = this.emailForDetails.trim().toLowerCase();
+
+
+    if (!email) {
+      alert("Please enter your email");
+      return;
+    }
+
+
+    const emailRegex =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+
+    if (!emailRegex.test(email)) {
+
+      alert("Please enter a valid email address");
+
+      return;
+    }
+
+
+
+    try {
+
+
+      await axios.post(
+        'https://aiemployeeplatform.leadsfactory.info/api/ai/send-details-email',
+        {
+          guestId: this.guestId,
+          ownerId: this.ownerId,
+          email: email
+        });
+
+
+
+      this.showEmailBox = false;
+
+      this.emailForDetails = '';
+
+
+      this.addBotMessage(
+        "Requested details have been shared to your email id."
+      );
+
+
+    }
+    catch (err) {
+
+      console.error(err);
+
+
+      this.addBotMessage(
+        "Sorry, I could not send the email."
+      );
+
+    }
+
   }
 
   closeChat() {
@@ -2252,6 +2318,22 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       const reply = res.data.reply;
 
 
+      console.log("AI reply:", reply);
+
+
+      // Save the customer request before input is cleared
+      this.lastCustomerMessage = msg;
+
+
+      console.log(
+        "CUSTOMER REQUEST SAVED:",
+        this.lastCustomerMessage
+      );
+
+
+      this.checkEmailRequest(reply);
+
+
       this.isTyping = false;
 
 
@@ -2347,8 +2429,22 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
 
       this.isTyping = false;
 
-      this.speakReply(
 
+      // Save customer request for email sharing
+      this.lastCustomerMessage = msg;
+
+
+      console.log(
+        "CUSTOMER REQUEST SAVED:",
+        this.lastCustomerMessage
+      );
+
+
+      // Check if AI is asking customer email
+      this.checkEmailRequest(res.data.reply);
+
+
+      this.speakReply(
         res.data.reply,
 
         () => {
@@ -2454,4 +2550,219 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
     this.cdr.detectChanges();
 
   }
+
+  private checkEmailRequest(reply: string) {
+
+    if (!reply) {
+      return;
+    }
+
+
+    const text = reply.toLowerCase();
+
+
+    const emailKeywords = [
+
+      "email",
+      "mail",
+      "email address",
+
+      "மெயில்",
+      "இமெயில்",
+      "மின்னஞ்சல்",
+      "மின்னஞ்சல் முகவரி",
+      "மின்னஞ்சல் அடையாளம்"
+
+    ];
+
+
+    const isEmailRequest =
+      emailKeywords.some(word =>
+        text.includes(word)
+      );
+
+
+    console.log(
+      "AI reply:",
+      text
+    );
+
+
+    console.log(
+      "Email detected:",
+      isEmailRequest
+    );
+
+
+    if (isEmailRequest) {
+
+
+      if (!this.emailSentSuccessfully) {
+
+        this.showEmailBox = true;
+
+      }
+
+
+      console.log(
+        "Showing email box"
+      );
+
+
+      this.cdr.detectChanges();
+
+    }
+
+  }
+
+  submitCustomerEmail() {
+    console.log("SEND BUTTON CLICKED");
+
+    console.log(
+      "EMAIL ENTERED:",
+      this.customerEmail
+    );
+
+    if (!this.customerEmail) {
+      alert('Please enter email address');
+      return;
+    }
+
+
+    const emailPattern =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+
+    if (!emailPattern.test(this.customerEmail)) {
+
+      alert('Please enter valid email address');
+
+      return;
+    }
+
+
+
+    console.log(
+      "Sending customer email:",
+      this.customerEmail
+    );
+
+
+    const data = {
+
+      email: this.customerEmail,
+
+      ownerId: this.ownerId,
+
+      customerName: this.guestName,
+
+      request: this.lastCustomerMessage
+
+    };
+
+
+
+    axios.post(
+      'https://aiemployeeplatform.leadsfactory.info/api/ai/send-details-email',
+      data
+    )
+      .then(res => {
+
+
+        console.log(
+          "EMAIL SENT",
+          res.data
+        );
+
+
+        this.emailSentSuccessfully = true;
+        const sentEmail = this.customerEmail;
+        this.showEmailBox = false;
+        this.customerEmail = '';
+        const emailReply =
+          'சரி, உங்க email address-க்கு கேட்ட details வெற்றிகரமாக அனுப்பிட்டேன்.';
+
+
+        this.addBotMessage(
+          emailReply
+        );
+
+
+        this.speakReply(
+          emailReply,
+          () => {
+
+            console.log(
+              "EMAIL SUCCESS VOICE FINISHED"
+            );
+
+           this.autoStartListening();
+
+          },
+          false,
+          true
+        );
+
+        // save email completion in conversation
+        axios.post(
+          'https://aiemployeeplatform.leadsfactory.info/api/ai/guest/save-email-conversation',
+          {
+
+            ownerId: this.ownerId,
+
+            guestId: this.guestId,
+
+            guestName: this.guestName,
+
+            email: sentEmail,
+
+            request: this.lastCustomerMessage,
+
+            reply: emailReply
+
+          }
+        );
+
+
+        // Save email conversation without calling AI
+
+        axios.post(
+          'https://aiemployeeplatform.leadsfactory.info/api/ai/guest/save-email-conversation',
+          {
+
+            ownerId: this.ownerId,
+
+            guestId: this.guestId,
+
+            guestName: this.guestName,
+
+            email: sentEmail,
+
+            reply: emailReply,
+
+            request: this.lastCustomerMessage
+
+          }
+        );
+
+      })
+      .catch(err => {
+
+
+        console.error(
+          "EMAIL ERROR",
+          err
+        );
+
+
+        alert(
+          "Email sending failed"
+        );
+
+
+      });
+
+
+  }
+
 }
