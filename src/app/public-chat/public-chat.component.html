@@ -124,31 +124,20 @@
 
         <!-- Email Request Box -->
 
-<div class="email-box"
-     *ngIf="showEmailBox">
+        <div class="email-box" *ngIf="showEmailBox">
 
 
-    <h3>
-        Enter your email address
-    </h3>
+            <h3>
+                Enter your email id or WhatsApp number
+            </h3>
 
 
-    <input
-        type="email"
-        [(ngModel)]="customerEmail"
-        placeholder="example@gmail.com"
-    />
+            <input type="text" [(ngModel)]="customerEmail" placeholder="Enter email id or WhatsApp number" />
 
-
-    <button
-        (click)="submitCustomerEmail()">
-
-        Send Details
-
-    </button>
-
-
-</div>
+            <button (click)="submitCustomerEmail()">
+                Send Details
+            </button>
+        </div>
 
         <!-- Step 3: Voice Only Mode -->
         <ng-container *ngIf="!collectingInfo">

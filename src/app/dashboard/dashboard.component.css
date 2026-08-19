@@ -68,9 +68,9 @@
 
 /* Cards */
 .cards {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
 }
 
 .card {
@@ -80,9 +80,20 @@
   border-radius: 10px;
 }
 
-.lead-hot-text { color: #dc2626; font-weight: 700; }
-.lead-warm-text { color: #d97706; font-weight: 700; }
-.lead-cold-text { color: #2563eb; font-weight: 700; }
+.lead-hot-text {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.lead-warm-text {
+  color: #d97706;
+  font-weight: 700;
+}
+
+.lead-cold-text {
+  color: #2563eb;
+  font-weight: 700;
+}
 
 /* AI Setup Box */
 .ai-setup {
@@ -1488,28 +1499,38 @@
   margin-bottom: 16px;
 }
 
-.uploaded-file-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #f9f9f9;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 13px;
-}
-
 .file-icon {
   font-size: 18px;
 }
 
+.uploaded-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 15px;
+  margin-bottom: 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fff;
+}
+
 .file-name {
-  flex: 1;
+  font-size: 15px;
   color: #333;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
+}
+
+.remove-file-btn {
+  background: #e91e63;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.remove-file-btn:hover {
+  opacity: 0.8;
 }
 
 .file-status {
@@ -1839,92 +1860,90 @@
 }
 
 .master-preview-banner {
-    margin-top: 16px;
-    border: 1.5px solid #ddd;
-    border-radius: 10px;
-    overflow: hidden;
+  margin-top: 16px;
+  border: 1.5px solid #ddd;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .master-preview-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 16px;
-    background: linear-gradient(135deg, #1e2673, #DD1977);
-    font-size: 13px;
-    font-weight: 600;
-    color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #1e2673, #DD1977);
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
 }
 
 .master-preview-count {
-    font-size: 12px;
-    background: rgba(255,255,255,0.2);
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-weight: 600;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 600;
 }
 
 .master-preview-content {
-    padding: 14px 16px;
-    font-size: 13px;
-    line-height: 1.7;
-    color: #444;
-    max-height: 200px;
-    overflow-y: auto;
-    background: white;
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #444;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
 }
 
 .q-time-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .q-time-select {
-    padding: 10px 12px;
-    border: 1.5px solid #ddd;
-    border-radius: 8px;
-    font-size: 14px;
-    outline: none;
-    font-family: inherit;
-    background: white;
-    cursor: pointer;
-    min-width: 70px;
+  padding: 10px 12px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+  background: white;
+  cursor: pointer;
+  min-width: 70px;
 }
 
 .q-time-select:focus {
-    border-color: #DD1977;
+  border-color: #DD1977;
 }
 
 .section-questions {
-    display:flex;
-    flex-direction:column;
-    gap:18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .q-field {
-    background:white;
-    padding:18px;
-    border-radius:10px;
-    border:1px solid #eee;
+  background: white;
+  padding: 18px;
+  border-radius: 10px;
+  border: 1px solid #eee;
 }
 
 .section-heading {
 
-    margin-top:25px;
-    padding:12px 15px;
+  margin-top: 25px;
+  padding: 12px 15px;
 
-    background:linear-gradient(
-        135deg,
-        #1e2673,
-        #DD1977
-    );
+  background: linear-gradient(135deg,
+      #1e2673,
+      #DD1977);
 
-    color:white;
+  color: white;
 
-    border-radius:8px;
+  border-radius: 8px;
 
-    font-size:18px;
-    font-weight:600;
+  font-size: 18px;
+  font-weight: 600;
 
 }

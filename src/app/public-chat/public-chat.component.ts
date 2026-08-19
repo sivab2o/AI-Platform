@@ -212,7 +212,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
 
 
       await axios.post(
-        'https://aiemployeeplatform.leadsfactory.info/api/ai/send-details-email',
+        'http://localhost:3000/api/ai/send-details-email',
         {
           guestId: this.guestId,
           ownerId: this.ownerId,
@@ -270,7 +270,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       };
     }
 
-    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/owner/check/${this.ownerId}`)
+    axios.get(`http://localhost:3000/api/ai/owner/check/${this.ownerId}`)
       .then(res => {
         if (res.data.valid !== true) {
           this.step = 'invalid';
@@ -403,13 +403,13 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   async submitForm() {
 
     try {
-      const checkRes = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/check', {
+      const checkRes = await axios.post('http://localhost:3000/api/ai/guest/check', {
         email: this.guestEmail, mobile: this.guestMobile, ownerId: this.ownerId
       });
 
       if (checkRes.data.exists) {
         this.guestId = checkRes.data.guestId;
-        const convRes = await axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/guest/conversations/${this.guestId}`);
+        const convRes = await axios.get(`http://localhost:3000/api/ai/guest/conversations/${this.guestId}`);
         const data = Array.isArray(convRes.data) ? convRes.data : [];
         if (data.length > 0) {
           data.forEach((c: any) => {
@@ -423,7 +423,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
         // ✅ Wait for welcome message first, then start mic after it finishes
         setTimeout(async () => {
           try {
-            const welcomeRes = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/welcome', {
+            const welcomeRes = await axios.post('http://localhost:3000/api/ai/guest/welcome', {
               ownerId: this.ownerId, guestId: this.guestId, guestName: this.guestName, returning: true,
               selectedLanguage: this.selectedLanguageCode
             });
@@ -478,7 +478,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
         }, 300);
 
       } else {
-        const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/register', {
+        const res = await axios.post('http://localhost:3000/api/ai/guest/register', {
           name: this.guestName, email: '', mobile: this.guestMobile, ownerId: this.ownerId
         });
         this.guestId = res.data.guestId;
@@ -488,7 +488,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
         // ✅ Wait for welcome message first, then start mic after it finishes
         setTimeout(async () => {
           try {
-            const welcomeRes = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/welcome', {
+            const welcomeRes = await axios.post('http://localhost:3000/api/ai/guest/welcome', {
               ownerId: this.ownerId, guestId: this.guestId, guestName: this.guestName, returning: false,
               selectedLanguage: this.selectedLanguageCode
             });
@@ -670,7 +670,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   async loadQuickReplies(): Promise<void> {
     if (this.quickRepliesDismissed) return;
     try {
-      const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/suggestions', { ownerId: this.ownerId });
+      const res = await axios.post('http://localhost:3000/api/ai/guest/suggestions', { ownerId: this.ownerId });
       this.allSuggestions = res.data.suggestions || [];
       this.quickReplies = [...this.allSuggestions];
       this.showQuickReplies = true;
@@ -692,7 +692,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
     try {
       // ✅ Always use selected language for quick replies
       const quickReplyLang = this.selectedLanguageCode ? `name:${this.selectedLanguageCode}` : this.detectTextLang(msg);
-      const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/guest/chat', {
+      const res = await axios.post('http://localhost:3000/api/ai/guest/chat', {
         ownerId: this.ownerId, guestId: this.guestId, guestName: this.guestName,
         message: msg, replyLang: quickReplyLang
       });
@@ -1595,7 +1595,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
 
       const response = await axios.post(
 
-        'https://aiemployeeplatform.leadsfactory.info/api/ai/guest/whisper',
+        'http://localhost:3000/api/ai/guest/whisper',
 
         formData,
 
@@ -1965,7 +1965,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   // ✅ Fetch TTS audio for one chunk
   private fetchTTS(text: string): Promise<string> {
     const language = this.selectedLanguage || 'english';
-    return axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/tts', { text, language })
+    return axios.post('http://localhost:3000/api/ai/tts', { text, language })
       .then(res => `data:audio/mp3;base64,${res.data.audioContent}`);
   }
 
@@ -2299,7 +2299,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       );
 
       const res = await axios.post(
-        'https://aiemployeeplatform.leadsfactory.info/api/ai/guest/chat',
+        'http://localhost:3000/api/ai/guest/chat',
         {
           ownerId: this.ownerId,
           guestId: this.guestId,
@@ -2413,7 +2413,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
 
       const res = await axios.post(
 
-        'https://aiemployeeplatform.leadsfactory.info/api/ai/guest/chat',
+        'http://localhost:3000/api/ai/guest/chat',
 
         {
           ownerId: this.ownerId,
@@ -2552,67 +2552,64 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   }
 
   private checkEmailRequest(reply: string) {
-
     if (!reply) {
       return;
     }
 
-
-    const text = reply.toLowerCase();
-
+    const replyText = reply.toLowerCase();
+    const customerText = (this.lastCustomerMessage || '').toLowerCase();
 
     const emailKeywords = [
-
       "email",
       "mail",
       "email address",
-
       "மெயில்",
       "இமெயில்",
       "மின்னஞ்சல்",
       "மின்னஞ்சல் முகவரி",
       "மின்னஞ்சல் அடையாளம்"
-
     ];
 
+    const whatsappKeywords = [
+      "whatsapp",
+      "whats app",
+      "வாட்சப்",
+      "வாட்சப்பில்",
+      "வாட்சப்புக்கு",
+      "வாட்சப் நம்பர்",
+      "வாட்ஸ்அப்",
+      "வாட்ஸ்அப்பில்",
+      "வாட்ஸ்அப்புக்கு",
+      "வாட்ஸ்அப் நம்பர்"
+    ];
 
     const isEmailRequest =
       emailKeywords.some(word =>
-        text.includes(word)
+        replyText.includes(word) ||
+        customerText.includes(word)
       );
 
-
-    console.log(
-      "AI reply:",
-      text
-    );
-
-
-    console.log(
-      "Email detected:",
-      isEmailRequest
-    );
-
-
-    if (isEmailRequest) {
-
-
-      if (!this.emailSentSuccessfully) {
-
-        this.showEmailBox = true;
-
-      }
-
-
-      console.log(
-        "Showing email box"
+    const isWhatsappRequest =
+      whatsappKeywords.some(word =>
+        replyText.includes(word) ||
+        customerText.includes(word)
       );
 
+    const isSharingRequest =
+      isEmailRequest || isWhatsappRequest;
 
+    console.log("AI reply:", replyText);
+    console.log("Customer message:", customerText);
+    console.log("Email detected:", isEmailRequest);
+    console.log("WhatsApp detected:", isWhatsappRequest);
+    console.log("Sharing request detected:", isSharingRequest);
+
+    if (isSharingRequest && !this.emailSentSuccessfully) {
+      this.showEmailBox = true;
       this.cdr.detectChanges();
 
+      console.log("Showing email / WhatsApp input box");
     }
-
   }
 
   submitCustomerEmail() {
@@ -2624,8 +2621,164 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
     );
 
     if (!this.customerEmail) {
-      alert('Please enter email address');
+
+      alert('Please enter email id or WhatsApp number');
+
       return;
+
+    }
+
+
+    // Detect WhatsApp number
+
+    const isWhatsappNumber =
+      /^[0-9]{10}$/.test(
+        this.customerEmail
+      );
+
+
+    if (isWhatsappNumber) {
+
+
+      console.log(
+        "Sending WhatsApp:",
+        this.customerEmail
+      );
+
+
+      const whatsappData = {
+
+        ownerId: this.ownerId,
+
+        customerNumber:
+          this.customerEmail,
+
+        customerName:
+          this.guestName,
+
+        message:
+          this.lastCustomerMessage
+
+
+      };
+
+
+
+      axios.post(
+
+        'http://localhost:3000/api/ai/send-details-whatsapp',
+
+        whatsappData
+
+      )
+
+        .then(res => {
+
+
+          console.log(
+            "WHATSAPP SENT",
+            res.data
+          );
+
+
+
+          const sentWhatsapp =
+            this.customerEmail;
+
+
+
+          this.showEmailBox = false;
+
+          this.customerEmail = '';
+
+
+
+          const whatsappReply =
+            'சரி, உங்க WhatsApp number-க்கு கேட்ட details அனுப்பிட்டேன்.';
+
+
+
+          this.addBotMessage(
+            whatsappReply
+          );
+
+
+
+          this.speakReply(
+
+            whatsappReply,
+
+            () => {
+
+              this.autoStartListening();
+
+            },
+
+            false,
+
+            true
+
+          );
+
+
+
+          // save conversation
+
+          axios.post(
+
+            'http://localhost:3000/api/ai/guest/save-email-conversation',
+
+            {
+
+              ownerId:
+                this.ownerId,
+
+
+              guestId:
+                this.guestId,
+
+
+              guestName:
+                this.guestName,
+
+
+              email:
+                sentWhatsapp,
+
+
+              request:
+                this.lastCustomerMessage,
+
+
+              reply:
+                whatsappReply
+
+            }
+
+          );
+
+
+        })
+
+        .catch(err => {
+
+
+          console.error(
+            "WHATSAPP ERROR",
+            err
+          );
+
+
+          alert(
+            "WhatsApp sending failed"
+          );
+
+
+        });
+
+
+      return;
+
     }
 
 
@@ -2647,6 +2800,103 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       this.customerEmail
     );
 
+    const enteredValue =
+      this.customerEmail.trim();
+
+
+    const whatsappPattern =
+      /^[0-9]{10}$/;
+
+
+    if (whatsappPattern.test(enteredValue)) {
+
+
+      let whatsappNumber =
+        enteredValue;
+
+
+      console.log(
+        "Detected WhatsApp Number:",
+        whatsappNumber
+      );
+
+
+      const whatsappData = {
+
+        ownerId: this.ownerId,
+
+        customerNumber: whatsappNumber,
+
+        customerName: this.guestName,
+
+        message: this.lastCustomerMessage
+
+      };
+
+
+
+      axios.post(
+        'http://localhost:3000/api/ai/send-details-whatsapp',
+        whatsappData
+      )
+        .then(res => {
+
+
+          console.log(
+            "WHATSAPP SENT",
+            res.data
+          );
+
+
+          this.showEmailBox = false;
+
+          this.customerEmail = '';
+
+
+          const whatsappReply =
+            'சரி, உங்கள் WhatsApp எண்ணுக்கு கேட்ட விவரங்களை அனுப்பிவிட்டேன்.';
+
+
+
+          this.addBotMessage(
+            whatsappReply
+          );
+
+
+          this.speakReply(
+            whatsappReply,
+            () => {
+
+              this.autoStartListening();
+
+            },
+            false,
+            true
+          );
+
+
+        })
+        .catch(err => {
+
+
+          console.error(
+            "WHATSAPP ERROR",
+            err
+          );
+
+
+          alert(
+            "WhatsApp sending failed"
+          );
+
+
+        });
+
+
+      return;
+
+    }
+
 
     const data = {
 
@@ -2663,7 +2913,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
 
 
     axios.post(
-      'https://aiemployeeplatform.leadsfactory.info/api/ai/send-details-email',
+      'http://localhost:3000/api/ai/send-details-email',
       data
     )
       .then(res => {
@@ -2696,7 +2946,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
               "EMAIL SUCCESS VOICE FINISHED"
             );
 
-           this.autoStartListening();
+            this.autoStartListening();
 
           },
           false,
@@ -2705,7 +2955,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
 
         // save email completion in conversation
         axios.post(
-          'https://aiemployeeplatform.leadsfactory.info/api/ai/guest/save-email-conversation',
+          'http://localhost:3000/api/ai/guest/save-email-conversation',
           {
 
             ownerId: this.ownerId,
@@ -2723,11 +2973,10 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
           }
         );
 
-
         // Save email conversation without calling AI
 
         axios.post(
-          'https://aiemployeeplatform.leadsfactory.info/api/ai/guest/save-email-conversation',
+          'http://localhost:3000/api/ai/guest/save-email-conversation',
           {
 
             ownerId: this.ownerId,

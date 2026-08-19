@@ -49,12 +49,11 @@
             </div>
         </div>
 
-
         <!-- ✅ Show link after trained -->
         <div class="your-link-banner" *ngIf="isTrained && !showQuestionnaire && !showTrainBox">
             <span>🔗 Your shareable link:</span>
-            <a [href]="'https://aiemployeeplatform.leadsfactory.info/user/' + user?.user_id" target="_blank">
-                https://aiemployeeplatform.leadsfactory.info/{{ user?.user_id }}
+            <a [href]="'http://localhost:4200/user/' + user?.user_id" target="_blank">
+                http://localhost:4200/{{ user?.user_id }}
             </a>
             <button class="copy-btn" (click)="copyLink()">📋 Copy</button>
         </div>
@@ -422,8 +421,8 @@
             <!-- ✅ Link banner -->
             <div class="link-banner">
                 <span>🔗 Your link:</span>
-                <a [href]="'https://aiemployeeplatform.leadsfactory.info/user/' + user?.user_id" target="_blank">
-                    'https://aiemployeeplatform.leadsfactory.info/user/{{ user?.user_id }}
+                <a [href]="'http://localhost:4200/user/' + user?.user_id" target="_blank">
+                    'http://localhost:4200/user/{{ user?.user_id }}
                 </a>
                 <button type="button" class="copy-btn" (click)="copyLink()">📋 Copy</button>
             </div>
@@ -446,6 +445,16 @@
                         <div class="master-type-icon">🌐</div>
                         <div class="master-type-label">Website URL</div>
                         <div class="master-type-desc">Paste your website link to auto-read content</div>
+                    </div>
+                    <div class="master-type-card" (click)="selectMasterType('share')">
+                        <div class="master-type-icon">📎</div>
+                        <div class="master-type-label">
+                            Shareable Files
+                        </div>
+                        <div class="master-type-desc">
+                            Upload files to share with customers
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -603,6 +612,68 @@
                     [disabled]="!sessionExtractedText || isFetchingUrl">
                     💾 Save Master AI
                 </button>
+            </div>
+
+            <!-- STEP 2E: Shareable Files -->
+
+            <div *ngIf="masterTrainingType === 'share'">
+
+                <div class="master-type-back">
+
+                    <button type="button" class="btn-change-type" (click)="changeMasterType()">
+
+                        ← Change Method
+
+                    </button>
+
+
+                    <span class="master-type-badge">
+                        📎 Shareable Files Mode
+                    </span>
+
+                </div>
+
+
+                <div class="file-drop-zone" (click)="triggerShareFileUpload()">
+
+                    <div class="file-drop-icon">
+                        📂
+                    </div>
+
+                    <p class="file-drop-title">
+                        Upload files to share with customers
+                    </p>
+
+                    <p class="file-drop-sub">
+                        PDF, DOC, Images, Excel, ZIP and all files
+                    </p>
+
+                </div>
+
+
+                <input type="file" #shareFileInput (change)="onShareFileUpload($event)" style="display:none" multiple>
+
+
+                <div class="uploaded-files-list" *ngIf="shareableFiles.length">
+
+
+                    <div class="uploaded-file-item" *ngFor="let f of shareableFiles">
+                        <div class="file-name"> 📎 {{f.file_name}} </div>
+
+                        <button type="button" class="remove-file-btn" (click)="deleteShareFile(f.id)"> 🗑 Delete
+                        </button>
+
+                    </div>
+                </div>
+
+                <button type="button" class="btn-save-master" (click)="saveShareableFiles()"
+                    [disabled]="newShareFiles.length === 0">
+
+                    💾 Save Shareable Files
+
+                </button>
+
+
             </div>
 
         </div>

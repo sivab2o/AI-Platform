@@ -40,7 +40,7 @@ export class ClientsComponent implements OnInit {
 
   loadClients() {
     this.isLoading = true;
-    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/clients/${this.user.user_id}`)
+    axios.get(`http://localhost:3000/api/ai/clients/${this.user.user_id}`)
       .then(res => {
         this.clients = res.data;
         this.filteredClients = res.data;

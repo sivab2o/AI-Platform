@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, ViewChild, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ViewChild, ElementRef, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -62,6 +62,10 @@ export class DashboardComponent implements OnInit {
   // ✅ Master training type
   masterTrainingType: string = ''; // 'qa' | 'file' | 'url'
   masterUploadedFiles: any[] = [];
+  shareableFiles: any[] = [];
+  newShareFiles: any[] = [];
+  @ViewChild('shareFileInput')
+  shareFileInput!: ElementRef;
   websiteUrl: string = '';
   isFetchingUrl: boolean = false;
   hourOptions: string[] = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
@@ -196,7 +200,7 @@ export class DashboardComponent implements OnInit {
     );
 
     this.http.post<any>(
-      'https://aiemployeeplatform.leadsfactory.info/api/ai/test-business-email',
+      'http://localhost:3000/api/ai/test-business-email',
       {
         email: emailQuestion.value.trim(),
 
@@ -288,6 +292,7 @@ export class DashboardComponent implements OnInit {
         this.user = JSON.parse(userData);
 
         this.loadTrainingData();
+        this.loadShareableFiles();
         this.loadQuestions();
         this.loadDashboardStats();
 
@@ -377,7 +382,7 @@ export class DashboardComponent implements OnInit {
 
     this.masterTrainingText = (this.masterTrainingText || '') + htmlContent;
 
-    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train/master', {
+    axios.post('http://localhost:3000/api/ai/train/master', {
       userId: this.user.user_id,
       masterData: this.masterTrainingText
     }).then(() => {
@@ -395,6 +400,37 @@ export class DashboardComponent implements OnInit {
       });
     }).catch(() => alert('❌ Save failed'));
   }
+
+  deleteShareFile(id:number){
+
+    if(!confirm("Delete this file?"))
+    return;
+
+    this.http.delete(
+    `http://localhost:3000/api/ai/share-file/${id}`
+    )
+    .subscribe({
+
+        next:()=>{
+
+            this.shareableFiles=
+            this.shareableFiles.filter(
+            f=>f.id!==id
+            );
+
+            this.cdr.detectChanges();
+
+        },
+
+        error:(err)=>{
+
+            console.log(err);
+
+        }
+
+    });
+
+}
 
   changeMasterType() {
     this.sessionExtractedText = '';
@@ -424,6 +460,161 @@ export class DashboardComponent implements OnInit {
   // ✅ Trigger file upload for file mode
   triggerMasterFileUpload() {
     setTimeout(() => { this.masterFileInput.nativeElement.click(); }, 0);
+  }
+
+  triggerShareFileUpload() {
+    this.shareFileInput.nativeElement.click();
+  }
+
+  onShareFileUpload(event: any) {
+
+
+    const files = event.target.files;
+
+
+    if (!files || files.length === 0) {
+      return;
+    }
+
+
+
+    Array.from(files).forEach((file: any) => {
+
+
+      const exists =
+        this.newShareFiles.some(
+          (f: any) => f.name === file.name
+        );
+
+
+      if (!exists) {
+
+        this.newShareFiles.push({
+
+          name: file.name,
+
+          file: file
+
+        });
+
+      }
+
+
+    });
+
+
+
+    event.target.value = '';
+
+
+
+    console.log(
+      "NEW SHARE FILES:",
+      this.newShareFiles
+    );
+
+
+  }
+
+  saveShareableFiles() {
+
+
+    if (!this.user || !this.user.user_id) {
+
+      alert("User not found");
+
+      console.log(
+        "CURRENT USER:",
+        this.user
+      );
+
+      return;
+
+    }
+
+
+    const userId = this.user.user_id;
+
+
+    console.log(
+      "Saving Share Files User:",
+      userId
+    );
+
+
+    this.newShareFiles.forEach((item: any, index: number) => {
+
+
+      const formData = new FormData();
+
+
+      formData.append(
+        "file",
+        item.file
+      );
+
+
+      formData.append(
+        "userId",
+        userId.toString()
+      );
+
+
+      this.http.post(
+        "http://localhost:3000/api/ai/share-file/upload",
+        formData
+      )
+        .subscribe({
+
+          next: (res: any) => {
+
+            if (index === this.newShareFiles.length - 1) {
+              this.newShareFiles = [];
+            }
+            console.log(
+              "FILE UPLOAD SUCCESS",
+              res
+            );
+
+
+            Swal.fire({
+
+              icon: 'success',
+
+              title: 'File Saved',
+
+              timer: 1200,
+
+              showConfirmButton: false
+
+            });
+
+
+          },
+
+
+          error: (err) => {
+
+
+            console.log(
+              "FILE UPLOAD ERROR",
+              err
+            );
+
+
+            alert(
+              "File upload failed"
+            );
+
+
+          }
+
+        });
+
+
+    });
+
+
   }
 
   // ✅ Handle drag over
@@ -463,7 +654,7 @@ export class DashboardComponent implements OnInit {
     const formData = new FormData();
     formData.append('file', file);
 
-    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/extract-file', formData, {
+    axios.post('http://localhost:3000/api/ai/extract-file', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }).then(res => {
       const text = res.data.text || '';
@@ -497,7 +688,7 @@ export class DashboardComponent implements OnInit {
     this.cdr.detectChanges();
 
     try {
-      const res = await axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/fetch-url', {
+      const res = await axios.post('http://localhost:3000/api/ai/fetch-url', {
         url: this.websiteUrl
       });
 
@@ -539,7 +730,7 @@ export class DashboardComponent implements OnInit {
     const formData = new FormData();
     formData.append('file', file);
 
-    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/extract-file', formData, {
+    axios.post('http://localhost:3000/api/ai/extract-file', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }).then(res => {
       const text = res.data.text || '';
@@ -608,7 +799,7 @@ export class DashboardComponent implements OnInit {
 
   loadTrainingData() {
     const userId = this.user?.user_id;
-    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/train/${userId}`)
+    axios.get(`http://localhost:3000/api/ai/train/${userId}`)
       .then(res => {
         if (res.data && res.data.training_data) {
           this.originalTrainingText = res.data.training_data;
@@ -625,9 +816,36 @@ export class DashboardComponent implements OnInit {
       });
   }
 
+  loadShareableFiles(){
+
+    const userId=this.user.user_id;
+
+    this.http.get<any[]>(
+    `http://localhost:3000/api/ai/share-files/${userId}`
+    )
+    .subscribe({
+
+        next:(res)=>{
+
+            this.shareableFiles=res;
+
+            this.cdr.detectChanges();
+
+        },
+
+        error:(err)=>{
+
+            console.log(err);
+
+        }
+
+    });
+
+}
+
   loadDashboardStats() {
     const userId = this.user?.user_id;
-    axios.get(`https://aiemployeeplatform.leadsfactory.info/api/ai/dashboard/stats/${userId}`)
+    axios.get(`http://localhost:3000/api/ai/dashboard/stats/${userId}`)
       .then(res => {
         this.totalConversations = res.data.totalConversations;
         this.totalClients = res.data.totalClients;
@@ -664,6 +882,43 @@ export class DashboardComponent implements OnInit {
       { id: 'business_location', section: 'Business Information', question: 'Business Location / Service Area', fieldType: 'text', options: [], mandatory: true, placeholder: 'Example: Coimbatore / All Tamil Nadu', value: '' },
       { id: 'business_website', section: 'Business Information', question: 'Website / Social Media URL', fieldType: 'url', options: [], mandatory: false, placeholder: 'https://example.com', value: '' },
       { id: 'business_whatsapp', section: 'Business Information', question: 'Business WhatsApp Number', fieldType: 'phone', options: [], mandatory: true, placeholder: 'Example: +91 98765 43210', value: '' },
+
+      {
+        id: 'wati_endpoint',
+        section: 'Business Information',
+        question: 'WATI API Endpoint',
+        fieldType: 'url',
+        options: [],
+        mandatory: false,
+        placeholder: 'https://live-mt-server.wati.io/xxxxx',
+        value: ''
+      },
+
+
+      {
+        id: 'wati_token',
+        section: 'Business Information',
+        question: 'WATI API Token',
+        fieldType: 'password',
+        options: [],
+        mandatory: false,
+        placeholder: 'Enter WATI token',
+        value: ''
+      },
+
+
+      {
+        id: 'wati_template_name',
+        section: 'Business Information',
+        question: 'WATI Template Name',
+        fieldType: 'text',
+        options: [],
+        mandatory: false,
+        placeholder: 'ai_platform',
+        value: ''
+      },
+
+
       { id: 'business_email', section: 'Business Information', question: 'Business Email', fieldType: 'email', options: [], mandatory: false, placeholder: 'info@example.com', value: '' },
       {
         id: 'business_app_password',
@@ -1028,7 +1283,7 @@ export class DashboardComponent implements OnInit {
     this.originalTrainingText = this.trainingText;
     this.showQuestionnaire = false;
 
-    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train', {
+    axios.post('http://localhost:3000/api/ai/train', {
 
       userId: this.user.user_id,
       name: this.user.name,
@@ -1041,7 +1296,25 @@ export class DashboardComponent implements OnInit {
 
       businessAppPassword:
         (this.questions.find(x => x.id === 'business_app_password')?.value || '')
-          .replace(/\s/g, '')
+          .replace(/\s/g, ''),
+
+
+      watiEndpoint:
+        this.questions.find(
+          x => x.id === 'wati_endpoint'
+        )?.value || '',
+
+
+      watiToken:
+        this.questions.find(
+          x => x.id === 'wati_token'
+        )?.value || '',
+
+
+      templateName:
+        this.questions.find(
+          x => x.id === 'wati_template_name'
+        )?.value || ''
 
 
     }).then(() => {
@@ -1092,7 +1365,7 @@ export class DashboardComponent implements OnInit {
   }
 
   copyLink() {
-    const link = `https://aiemployeeplatform.leadsfactory.info/user/${this.user.user_id}`;
+    const link = `http://localhost:3000/user/${this.user.user_id}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(link).then(() => {
         Swal.fire({ icon: 'success', title: 'Link Copied!', timer: 1000, showConfirmButton: false, confirmButtonColor: '#DD1977' });
@@ -1149,7 +1422,7 @@ export class DashboardComponent implements OnInit {
       passwordLength: businessAppPassword.length
     });
 
-    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train', {
+    axios.post('http://localhost:3000/api/ai/train', {
 
       userId: this.user.user_id,
 
@@ -1179,7 +1452,7 @@ export class DashboardComponent implements OnInit {
     if (!this.masterTrainingText || !this.masterTrainingText.trim()) {
       alert('Please enter master training data'); return;
     }
-    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train/master', {
+    axios.post('http://localhost:3000/api/ai/train/master', {
       userId: this.user.user_id, masterData: this.masterTrainingText
     }).then(() => {
       this.showTrainBox = false;
@@ -1201,7 +1474,7 @@ export class DashboardComponent implements OnInit {
     if (!this.trainingText.trim()) { alert('Please enter training data'); return; }
     this.isExpanded = false;
     this.originalTrainingText = this.trainingText;
-    axios.post('https://aiemployeeplatform.leadsfactory.info/api/ai/train', {
+    axios.post('http://localhost:3000/api/ai/train', {
       userId: this.user.user_id, name: this.user.name, email: this.user.email,
       mobile: this.user.mobile, trainingData: this.trainingText
     }).then(() => {
