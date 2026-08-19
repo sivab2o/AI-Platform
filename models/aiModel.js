@@ -90,6 +90,70 @@ const AIModel = {
         );
     },
 
+    saveBusinessWhatsappSettings: (data, callback) => {
+
+        const sql = `
+    INSERT INTO business_whatsapp_settings
+    (
+        user_id,
+        wati_endpoint,
+        wati_token,
+        template_name
+    )
+
+    VALUES (?, ?, ?, ?)
+
+    ON DUPLICATE KEY UPDATE
+
+        wati_endpoint = VALUES(wati_endpoint),
+        wati_token = VALUES(wati_token),
+        template_name = VALUES(template_name)
+
+    `;
+
+
+        db.query(
+            sql,
+            [
+                data.userId,
+                data.watiEndpoint,
+                data.watiToken,
+                data.templateName
+            ],
+            callback
+        );
+
+    },
+
+    getBusinessWhatsappSettings: (userId, callback) => {
+
+
+        const sql = `
+
+    SELECT
+
+        wati_endpoint,
+        wati_token,
+        template_name
+
+    FROM business_whatsapp_settings
+
+    WHERE user_id = ?
+
+    LIMIT 1
+
+    `;
+
+
+        db.query(
+            sql,
+            [userId],
+            callback
+        );
+
+
+    },
+
     saveMasterTraining: (userId, masterData, callback) => {
         const sql = `
         INSERT INTO ai_training (user_id, master_data)
@@ -227,7 +291,7 @@ const AIModel = {
 
     updateGuestLeadDetails: (guestId, product, value, closingDate, callback) => {
 
-    const sql = `
+        const sql = `
     UPDATE guests 
     SET 
         expected_product = ?,
@@ -236,21 +300,93 @@ const AIModel = {
     WHERE id = ?
     `;
 
-    db.query(
-        sql,
-        [
-            product,
-            value,
-            closingDate,
-            guestId
-        ],
-        callback
-    );
-},
+        db.query(
+            sql,
+            [
+                product,
+                value,
+                closingDate,
+                guestId
+            ],
+            callback
+        );
+    },
 
     updateGuestScore: (guestId, score, callback) => {
         const sql = `UPDATE guests SET interest_score = ? WHERE id = ?`;
         db.query(sql, [score, guestId], callback);
+    },
+
+    saveShareFile: (data, callback) => {
+
+        const sql = `
+    INSERT INTO shareable_files
+    (
+        user_id,
+        file_name,
+        file_path,
+        file_type
+    )
+    VALUES (?,?,?,?)
+    `;
+
+
+        db.query(
+            sql,
+            [
+                data.userId,
+                data.fileName,
+                data.filePath,
+                data.fileType
+            ],
+            callback
+        );
+
+    },
+
+    getShareFiles: (userId, callback) => {
+
+        const sql = `
+    SELECT *
+    FROM shareable_files
+    WHERE user_id=?
+    ORDER BY id DESC
+    `;
+
+        db.query(sql, [userId], callback);
+
+    },
+
+
+    deleteShareFile: (id, callback) => {
+
+        const sql = `
+    DELETE FROM shareable_files
+    WHERE id=?
+    `;
+
+        db.query(sql, [id], callback);
+
+    },
+
+    getShareFiles: (userId, callback) => {
+
+
+        const sql = `
+    SELECT *
+    FROM shareable_files
+    WHERE user_id = ?
+    ORDER BY id DESC
+    `;
+
+
+        db.query(
+            sql,
+            [userId],
+            callback
+        );
+
+
     },
 };
 

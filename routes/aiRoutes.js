@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
-const { getDashboardStats, trainAI, saveMasterAI, getTraining, chatWithAI, updateLang, getLang, getConversations, registerGuest, guestChat, checkOwner, checkGuest, getGuestConversationsByGuestId, getAISuggestions, getClients, getQuestions, saveQuestion, updateQuestion, deleteQuestion, guestWelcome, extractFileText, fetchWebsiteContent, whisperTranscribe, textToSpeech, sendDetailsEmail, saveEmailConversation } = require('../controllers/aiController.js');
+const { getDashboardStats, trainAI, saveMasterAI, getTraining, chatWithAI, updateLang, getLang, getConversations, registerGuest, guestChat, checkOwner, checkGuest, getGuestConversationsByGuestId, getAISuggestions, getClients, getQuestions, saveQuestion, updateQuestion, deleteQuestion, guestWelcome, extractFileText, uploadShareFile, fetchWebsiteContent, whisperTranscribe, textToSpeech, sendDetailsEmail, sendDetailsWhatsapp, saveEmailConversation, getShareFiles, deleteShareFile } = require('../controllers/aiController.js');
 const { translateText } = require('../controllers/translateController.js');
 
 router.get('/dashboard/stats/:userId', getDashboardStats);
@@ -28,10 +28,14 @@ router.put('/questions/:id', updateQuestion);
 router.delete('/questions/:id', deleteQuestion);
 router.post('/guest/welcome', guestWelcome);
 router.post('/extract-file', upload.single('file'), extractFileText);
+router.post('/share-file/upload',upload.single('file'), uploadShareFile);
+router.get('/share-files/:userId', getShareFiles);
+router.delete('/share-file/:id', deleteShareFile);
 router.post('/fetch-url', fetchWebsiteContent);
 router.post('/guest/whisper', upload.single('audio'), whisperTranscribe);
 router.post('/tts', textToSpeech);
 router.post('/send-details-email', sendDetailsEmail);
+router.post('/send-details-whatsapp', sendDetailsWhatsapp);
 router.post('/guest/save-email-conversation', saveEmailConversation);
 
 module.exports = router;
