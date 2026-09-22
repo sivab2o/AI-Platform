@@ -4,13 +4,236 @@ const AIModel = {
 
     getDashboardStats: (userId, callback) => {
         const sql = `
-        SELECT
-            (SELECT COUNT(*) FROM guest_conversations WHERE owner_id = ?) AS totalConversations,
-            (SELECT COUNT(DISTINCT guest_id) FROM guest_conversations WHERE owner_id = ?) AS totalClients
-        FROM dual
-    `;
-        db.query(sql, [userId, userId], callback);
+    SELECT
+      (
+        SELECT COUNT(*)
+        FROM guest_conversations
+        WHERE owner_id = ?
+      ) AS totalConversations,
+
+      (
+        SELECT COUNT(DISTINCT guest_id)
+        FROM guest_conversations
+        WHERE owner_id = ?
+      ) AS totalClients,
+
+      u.current_plan AS currentPlan,
+
+      COALESCE(
+        u.character_limit,
+        0
+      ) AS characterLimit,
+
+      COALESCE(u.characters_used, 0) AS charactersUsed,
+
+        u.subscription_expires_at AS subscriptionExpiresAt,
+
+      GREATEST(
+        COALESCE(u.character_limit, 0) -
+        COALESCE(u.characters_used, 0),
+        0
+      ) AS characterBalance
+
+    FROM users u
+    WHERE u.user_id = ?
+    LIMIT 1
+  `;
+
+        db.query(
+            sql,
+            [userId, userId, userId],
+            callback
+        );
     },
+
+    checkOwnerCharacterBalance: (
+  ownerId,
+  callback
+) => {
+  const sql = `
+    SELECT
+      id,
+      status,
+      current_plan AS currentPlan,
+      character_limit AS characterLimit,
+      characters_used AS charactersUsed,
+
+      GREATEST(
+        character_limit - characters_used,
+        0
+      ) AS characterBalance,
+
+      subscription_expires_at AS expiresAt,
+
+      CASE
+        WHEN subscription_expires_at IS NULL
+          THEN 1
+        WHEN subscription_expires_at <= NOW()
+          THEN 1
+        ELSE 0
+      END AS isExpired
+
+    FROM users
+    WHERE user_id = ?
+    AND role = 'owner'
+    LIMIT 1
+  `;
+
+  db.query(
+    sql,
+    [ownerId],
+    (error, results) => {
+      if (error) {
+        return callback(error);
+      }
+
+      if (!results || results.length === 0) {
+        return callback(null, {
+          ownerFound: false,
+          allowed: false
+        });
+      }
+
+      const owner = results[0];
+
+      const characterLimit =
+        Number(owner.characterLimit) || 0;
+
+      const charactersUsed =
+        Number(owner.charactersUsed) || 0;
+
+      const characterBalance =
+        Math.max(
+          characterLimit - charactersUsed,
+          0
+        );
+
+      const isExpired =
+        Number(owner.isExpired) === 1;
+
+      return callback(null, {
+        ownerFound: true,
+
+        allowed:
+          owner.status === 'active' &&
+          !isExpired &&
+          characterBalance > 0,
+
+        status: owner.status,
+        currentPlan: owner.currentPlan,
+        characterLimit,
+        charactersUsed,
+        characterBalance,
+        expiresAt: owner.expiresAt,
+        isExpired
+      });
+    }
+  );
+},
+
+consumeOwnerCharacters: (
+  ownerId,
+  charactersToUse,
+  callback
+) => {
+  const updateSql = `
+    UPDATE users
+    SET characters_used =
+      characters_used + ?
+    WHERE user_id = ?
+    AND role = 'owner'
+    AND status = 'active'
+    AND subscription_expires_at IS NOT NULL
+    AND subscription_expires_at > NOW()
+    AND character_limit > characters_used
+    AND characters_used + ? <= character_limit
+  `;
+
+  db.query(
+    updateSql,
+    [
+      charactersToUse,
+      ownerId,
+      charactersToUse
+    ],
+    (updateError, updateResult) => {
+      if (updateError) {
+        return callback(updateError);
+      }
+
+      const selectSql = `
+        SELECT
+          current_plan AS currentPlan,
+          character_limit AS characterLimit,
+          characters_used AS charactersUsed,
+
+          GREATEST(
+            character_limit - characters_used,
+            0
+          ) AS characterBalance,
+
+          subscription_expires_at AS expiresAt,
+
+          CASE
+            WHEN subscription_expires_at IS NULL
+              THEN 1
+            WHEN subscription_expires_at <= NOW()
+              THEN 1
+            ELSE 0
+          END AS isExpired
+
+        FROM users
+        WHERE user_id = ?
+        AND role = 'owner'
+        LIMIT 1
+      `;
+
+      db.query(
+        selectSql,
+        [ownerId],
+        (selectError, results) => {
+          if (selectError) {
+            return callback(selectError);
+          }
+
+          if (!results || results.length === 0) {
+            return callback(null, {
+              ownerFound: false,
+              consumed: false
+            });
+          }
+
+          const usage = results[0];
+
+          return callback(null, {
+            ownerFound: true,
+
+            consumed:
+              updateResult.affectedRows === 1,
+
+            currentPlan:
+              usage.currentPlan,
+
+            characterLimit:
+              Number(usage.characterLimit) || 0,
+
+            charactersUsed:
+              Number(usage.charactersUsed) || 0,
+
+            characterBalance:
+              Number(usage.characterBalance) || 0,
+
+            expiresAt:
+              usage.expiresAt,
+
+            isExpired:
+              Number(usage.isExpired) === 1
+          });
+        }
+      );
+    }
+  );
+},
 
     saveTraining: (data, callback) => {
         const sql = `
@@ -127,7 +350,6 @@ const AIModel = {
 
     getBusinessWhatsappSettings: (userId, callback) => {
 
-
         const sql = `
 
     SELECT
@@ -152,6 +374,40 @@ const AIModel = {
         );
 
 
+    },
+
+    getSharingAvailability: (userId, callback) => {
+
+        const sql = `
+        SELECT
+            EXISTS(
+                SELECT 1
+                FROM business_email_settings
+                WHERE user_id = ?
+                  AND business_email IS NOT NULL
+                  AND TRIM(business_email) <> ''
+                  AND app_password IS NOT NULL
+                  AND TRIM(app_password) <> ''
+            ) AS emailAvailable,
+
+            EXISTS(
+                SELECT 1
+                FROM business_whatsapp_settings
+                WHERE user_id = ?
+                  AND wati_endpoint IS NOT NULL
+                  AND TRIM(wati_endpoint) <> ''
+                  AND wati_token IS NOT NULL
+                  AND TRIM(wati_token) <> ''
+                  AND template_name IS NOT NULL
+                  AND TRIM(template_name) <> ''
+            ) AS whatsappAvailable
+    `;
+
+        db.query(
+            sql,
+            [userId, userId],
+            callback
+        );
     },
 
     saveMasterTraining: (userId, masterData, callback) => {
@@ -225,10 +481,54 @@ const AIModel = {
         db.query(sql, [mobile, ownerId], callback);
     },
 
-    getGuestConversationsByGuestId: (guestId, callback) => {
-        const sql = `SELECT * FROM guest_conversations WHERE guest_id = ? ORDER BY created_at ASC`;
-        db.query(sql, [guestId], callback);
-    },
+    getGuestConversationsByGuestId: (
+  guestId,
+  callback
+) => {
+  const sql = `
+    SELECT *
+    FROM guest_conversations
+    WHERE guest_id = ?
+    ORDER BY created_at ASC
+  `;
+
+  db.query(sql, [guestId], callback);
+},
+
+getConversationReportAccess: (
+  userId,
+  guestId,
+  callback
+) => {
+  const sql = `
+    SELECT
+      u.id AS ownerId,
+      u.user_id AS ownerUserId,
+      u.current_plan AS currentPlan,
+      u.status,
+      u.subscription_expires_at AS expiresAt,
+
+      g.id AS guestId,
+      g.name AS guestName,
+      g.mobile AS guestMobile
+
+    FROM users u
+
+    INNER JOIN guests g
+      ON g.owner_id = u.user_id
+
+    WHERE u.id = ?
+    AND g.id = ?
+    AND u.role = 'owner'
+    LIMIT 1
+  `;
+
+  db.query(
+    sql,
+    [userId, guestId],
+    callback
+  );
+},
 
     getClients: (userId, callback) => {
         const query = `
@@ -320,28 +620,28 @@ const AIModel = {
     saveShareFile: (data, callback) => {
 
         const sql = `
-    INSERT INTO shareable_files
-    (
-        user_id,
-        file_name,
-        file_path,
-        file_type
-    )
-    VALUES (?,?,?,?)
+        INSERT INTO shareable_files
+        (
+            user_id,
+            file_title,
+            file_name,
+            file_path,
+            file_type
+        )
+        VALUES (?, ?, ?, ?, ?)
     `;
-
 
         db.query(
             sql,
             [
                 data.userId,
+                data.fileTitle,
                 data.fileName,
                 data.filePath,
                 data.fileType
             ],
             callback
         );
-
     },
 
     getShareFiles: (userId, callback) => {
@@ -366,26 +666,6 @@ const AIModel = {
     `;
 
         db.query(sql, [id], callback);
-
-    },
-
-    getShareFiles: (userId, callback) => {
-
-
-        const sql = `
-    SELECT *
-    FROM shareable_files
-    WHERE user_id = ?
-    ORDER BY id DESC
-    `;
-
-
-        db.query(
-            sql,
-            [userId],
-            callback
-        );
-
 
     },
 };

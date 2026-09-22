@@ -8,6 +8,8 @@ const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 const helmet = require('helmet');
 // ✅ Generous per-IP limit — real users never hit this, spam bots do
 const aiLimiter = rateLimit({
@@ -21,7 +23,7 @@ app.use('/api/ai', aiLimiter);
 
 app.use(cors({
   origin: ['http://187.127.166.122', 'http://localhost:4200', 'http://localhost:3000','https://aiemployeeplatform.leadsfactory.info/login'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE']
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 }));
 app.use(helmet());
 
@@ -31,6 +33,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/payments',paymentRoutes);
 app.use('/', (req, res) => { res.send('AI Employee Backend Running'); });
 
 const port = 3000;

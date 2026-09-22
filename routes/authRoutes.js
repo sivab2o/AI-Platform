@@ -4,7 +4,9 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 
 // Signup route
-router.post('/signup', authController.signup);
+router.post( '/signup/create-order', authController.createSignupOrder );
+
+router.post( '/signup/verify-payment', authController.verifySignupPayment );
 
 // Login route
 router.post('/login', authController.login);

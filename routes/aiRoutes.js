@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
+const authenticateToken = require('../middleware/authMiddleware');
 
-const { getDashboardStats, trainAI, saveMasterAI, getTraining, chatWithAI, updateLang, getLang, getConversations, registerGuest, guestChat, checkOwner, checkGuest, getGuestConversationsByGuestId, getAISuggestions, getClients, getQuestions, saveQuestion, updateQuestion, deleteQuestion, guestWelcome, extractFileText, uploadShareFile, fetchWebsiteContent, whisperTranscribe, textToSpeech, sendDetailsEmail, sendDetailsWhatsapp, saveEmailConversation, getShareFiles, deleteShareFile } = require('../controllers/aiController.js');
+const { getDashboardStats, trainAI, saveMasterAI, getTraining, chatWithAI, updateLang, getLang, getConversations, registerGuest, guestChat, checkOwner, checkGuest, getGuestConversationsByGuestId, getAISuggestions, getClients, getQuestions, saveQuestion, updateQuestion, deleteQuestion, guestWelcome, extractFileText, uploadShareFile, fetchWebsiteContent, whisperTranscribe, textToSpeech, sendDetailsEmail, sendDetailsWhatsapp, saveEmailConversation, getShareFiles, deleteShareFile, downloadClientConversationReport } = require('../controllers/aiController.js');
 const { translateText } = require('../controllers/translateController.js');
 
 router.get('/dashboard/stats/:userId', getDashboardStats);
@@ -20,6 +21,7 @@ router.post('/guest/chat', guestChat);
 router.get('/owner/check/:ownerId', checkOwner);
 router.post('/guest/check', checkGuest);
 router.get('/guest/conversations/:guestId', getGuestConversationsByGuestId);
+router.get('/guest/conversations/:guestId/report', authenticateToken, downloadClientConversationReport);
 router.post('/guest/suggestions', getAISuggestions);
 router.get('/clients/:userId', getClients);
 router.get('/questions/:ownerId', getQuestions);

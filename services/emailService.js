@@ -1,86 +1,69 @@
 const nodemailer = require('nodemailer');
 
-
 const sendInfoEmail = async ({
     businessEmail,
     appPassword,
     customerEmail,
     customerName,
     subject,
-    content
+    content,
+    attachments = []
 }) => {
 
     try {
 
-        const transporter = nodemailer.createTransport({
+        const transporter =
+            nodemailer.createTransport({
+                host: 'smtp.gmail.com',
+                port: 587,
+                secure: false,
 
-            host: "smtp.gmail.com",
+                auth: {
+                    user: businessEmail,
+                    pass: appPassword
+                },
 
-            port: 587,
+                tls: {
+                    rejectUnauthorized: false
+                }
+            });
 
-            secure: false,
-
-            auth: {
-
-                user: businessEmail,
-
-                pass: appPassword
-
-            },
-
-            tls: {
-
-                rejectUnauthorized: false
-
-            }
-
-        });
-
+        const safeContent =
+            String(content || '')
+                .replace(/\n/g, '<br>');
 
         await transporter.sendMail({
-
             from: businessEmail,
-
             to: customerEmail,
-
             subject: subject,
 
             html: `
                 <h3>Hello ${customerName || 'Customer'},</h3>
-
-                <p>${content.replace(/\n/g, '<br>')}</p>
-
+                <p>${safeContent}</p>
                 <br>
-
                 <p>Thank you.</p>
-            `
+            `,
 
+            attachments
         });
 
-
         console.log(
-            "Email sent successfully:",
+            'Email sent successfully:',
             customerEmail
         );
 
-
         return true;
 
+    } catch (error) {
 
-    }
-    catch (error) {
-
-        console.log(
-            "Email Error:",
+        console.error(
+            'Email Error:',
             error.message
         );
 
         throw error;
-
     }
-
 };
-
 
 module.exports = {
     sendInfoEmail

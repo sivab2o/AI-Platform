@@ -6,104 +6,219 @@ const sendWhatsappMessage = async ({
     customerNumber,
     customerName,
     message,
-    templateName
+    templateName,
+    fileTemplateName =
+        process.env.WATI_FILE_TEMPLATE_NAME ||
+        'ai_file_share',
+    attachments = []
 }) => {
 
-    console.log(
-        "WHATSAPP SERVICE INPUT:",
-        {
-            endpoint,
-            customerNumber,
-            customerName,
-            templateName,
-            messageLength: message?.length
-        }
-    );
+    const cleanEndpoint =
+        String(endpoint || '')
+            .replace(/\/+$/, '');
 
-    try {
+    const cleanNumber =
+        String(customerNumber || '')
+            .replace(/\D/g, '');
 
-        const url =
-            `${endpoint}/api/v1/sendTemplateMessage?whatsappNumber=${customerNumber}`;
+    const cleanName =
+        String(customerName || 'Customer')
+            .trim();
 
-        const cleanName = String(
-            customerName || 'Customer'
-        ).trim();
-
-        const cleanMessage = String(message || '')
+    const cleanMessage =
+        String(message || '')
             .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-            .replace(/https?:\/\/\S+/g, '')
             .replace(/\n/g, ' ')
             .replace(/\t/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
 
-        console.log("CLEAN NAME:", cleanName);
-        console.log("CLEAN MESSAGE:", cleanMessage);
+    if (!cleanEndpoint) {
+        throw new Error('WATI endpoint is missing');
+    }
+
+    if (!token) {
+        throw new Error('WATI token is missing');
+    }
+
+    if (!cleanNumber) {
+        throw new Error(
+            'Customer WhatsApp number is missing'
+        );
+    }
+
+    const sendTemplate = async (
+        selectedTemplate,
+        parameters
+    ) => {
+
+        const url =
+            `${cleanEndpoint}/api/v1/sendTemplateMessage` +
+            `?whatsappNumber=${cleanNumber}`;
 
         const response = await axios.post(
             url,
             {
-                template_name: templateName,
-                broadcast_name: templateName,
+                template_name:
+                    selectedTemplate,
 
-                parameters: [
-                    {
-                        name: "1",
-                        value: cleanName
-                    },
-                    {
-                        name: "2",
-                        value: cleanMessage
-                    }
-                ]
+                broadcast_name:
+                    selectedTemplate,
+
+                parameters
             },
             {
                 headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json"
+                    Authorization:
+                        `Bearer ${token}`,
+
+                    'Content-Type':
+                        'application/json'
                 }
             }
         );
 
         console.log(
-            "WATI LOCAL MESSAGE ID:",
-            response.data.local_message_id
+            'WATI TEMPLATE RESPONSE:',
+            {
+                template:
+                    selectedTemplate,
+
+                result:
+                    response.data?.result,
+
+                info:
+                    response.data?.info,
+
+                message:
+                    response.data?.message,
+
+                localMessageId:
+                    response.data?.local_message_id
+            }
         );
 
-        console.log(
-            "WATI RESPONSE:",
-            JSON.stringify(
-                response.data,
-                null,
-                2
-            )
-        );
+        if (response.data?.result === false) {
+
+            const watiMessage =
+                response.data?.info ||
+                response.data?.message ||
+                'WATI rejected the template request';
+
+            throw new Error(watiMessage);
+        }
 
         return response.data;
+    };
 
-    } catch (error) {
+    /*
+     * FILE-SHARING FLOW
+     */
+    if (
+        Array.isArray(attachments) &&
+        attachments.length > 0
+    ) {
 
-        console.log(
-            "WATI ERROR STATUS:",
-            error.response?.status
-        );
+        const sentFiles = [];
 
-        console.log(
-            "WATI ERROR DATA:",
-            JSON.stringify(
-                error.response?.data,
-                null,
-                2
-            )
-        );
+        for (const file of attachments) {
 
-        console.log(
-            "WATI ERROR MESSAGE:",
-            error.message
-        );
+            const publicFileUrl =
+                String(file.url || '').trim();
 
-        throw error;
+            const fileTitle =
+                String(
+                    file.title ||
+                    file.filename ||
+                    'Requested file'
+                ).trim();
+
+            if (
+                !publicFileUrl.startsWith('https://')
+            ) {
+
+                throw new Error(
+                    `Public HTTPS URL is missing for ${fileTitle}`
+                );
+            }
+
+            console.log(
+                'SENDING WATI DOCUMENT TEMPLATE:',
+                {
+                    template:
+                        fileTemplateName,
+
+                    title:
+                        fileTitle,
+
+                    filename:
+                        file.filename,
+
+                    url:
+                        publicFileUrl
+                }
+            );
+
+            const result =
+                await sendTemplate(
+                    fileTemplateName,
+                    [
+                        {
+                            name: 'pdfLink',
+                            value: publicFileUrl
+                        },
+                        {
+                            name: '1',
+                            value: cleanName
+                        },
+                        {
+                            name: '2',
+                            value: fileTitle
+                        }
+                    ]
+                );
+
+            sentFiles.push({
+                title:
+                    fileTitle,
+
+                filename:
+                    file.filename,
+
+                result
+            });
+        }
+
+        return {
+            success: true,
+            filesSent: sentFiles.length,
+            files: sentFiles
+        };
     }
+
+    /*
+     * NORMAL DETAILS FLOW
+     */
+    const normalResult =
+        await sendTemplate(
+            templateName,
+            [
+                {
+                    name: '1',
+                    value: cleanName
+                },
+                {
+                    name: '2',
+                    value: cleanMessage
+                }
+            ]
+        );
+
+    return {
+        success: true,
+        filesSent: 0,
+        result: normalResult
+    };
 };
 
 module.exports = {
