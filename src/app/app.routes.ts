@@ -9,13 +9,18 @@ import { ClientsComponent } from './clients/clients.component';
 import { ClientConversationsComponent } from './client-conversations/client-conversations.component';
 import { BasicQuestionsComponent } from './basic-questions/basic-questions.component';
 import { AuthGuard } from './guards/auth.guard';
+import { AdminDashboardComponent } from './admin-dashboard/admin-dashboard.component';
+import { AdminGuard } from './guards/admin.guard';
 
 
 export const routes: Routes = [
     { path: 'login', component: LoginComponent },
     { path: 'signup', component: SignupComponent },
     { path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard] },
+    { path: 'admin', component: AdminDashboardComponent, canActivate: [AdminGuard], data: { view: 'dashboard' }},
+    { path: 'admin/payments', component: AdminDashboardComponent, canActivate: [AdminGuard], data: { view: 'payments' }},
     { path: 'clients', component: ClientsComponent, canActivate: [AuthGuard] },
+    { path: 'payments', component: ClientsComponent, canActivate: [AuthGuard], data: { view: 'payments'}},
     { path: 'clients/:guestId/conversations', component: ClientConversationsComponent, canActivate: [AuthGuard] },
     { path: 'basic-questions', component: BasicQuestionsComponent, canActivate: [AuthGuard] },
     { path: 'chat', component: ChatComponent, canActivate: [AuthGuard] },

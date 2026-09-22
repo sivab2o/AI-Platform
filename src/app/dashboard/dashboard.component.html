@@ -4,7 +4,17 @@
         <h2>AI Employee</h2>
         <ul>
             <li class="active">🏠 Dashboard</li>
-            <li (click)="Clients()">👥 Clients</li>
+            <li routerLink="/clients" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+
+                👥 Clients
+
+            </li>
+
+            <li routerLink="/payments" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+
+                💳 Payments
+
+            </li>
         </ul>
         <button class="logout-btn" (click)="logout()">Logout</button>
     </div>
@@ -27,6 +37,34 @@
         </div>
 
         <div class="cards">
+
+            <div class="card">
+                <h4>AI Character Balance</h4>
+
+                <p>
+                    {{ characterBalance | number }} /
+                    {{ characterLimit | number }}
+                </p>
+
+                <small>
+                    {{ charactersUsed | number }}
+                    characters used
+                </small>
+
+                <small>
+                    Plan:
+                    {{ currentPlan || '-' }}
+                </small>
+
+                <small class="expiry-date">
+                    Expiry Date:
+                    {{
+                    subscriptionExpiresAt
+                    ? (subscriptionExpiresAt | date:'dd MMM yyyy')
+                    : '-'
+                    }}
+                </small>
+            </div>
             <div class="card">
                 <h4>Total Conversations</h4>
                 <p>{{ totalConversations }}</p>
@@ -61,10 +99,10 @@
         <!-- Train AI Buttons -->
         <div class="train-trigger" *ngIf="!showQuestionnaire && !showTrainBox">
             <button class="btn-basic-train" (click)="startBasicTraining()">
-                🧠 {{ isTrained ? 'Edit Basic AI Employee' : 'Train Basic AI Employee' }}
+                🧠 {{ isTrained ? 'Edit AI Employee First Time Setup' : 'AI Employee First Time Setup' }}
             </button>
             <button class="btn-master-train" *ngIf="isTrained" (click)="startMasterTraining()">
-                {{ masterTrainingText ? '⚡ Edit Master AI Employee' : '⚡ Train Master AI Employee' }}
+                {{ masterTrainingText ? '⚡ Edit AI Employee Advanced Setup' : '⚡ AI Employee Advanced Setup' }}
             </button>
         </div>
 
@@ -85,23 +123,6 @@
                 <div class="q-header-top">
                     <h3>🧠 Train Your AI Employee</h3>
                     <button class="btn-close-q" (click)="goBackToDashboard()">✕</button>
-                </div>
-
-                <!-- Section Steps -->
-                <div class="section-steps">
-                    <div class="section-step" *ngFor="let sec of sections; let i = index"
-                        [class.active]="i === currentSectionIndex" [class.done]="i < currentSectionIndex" [title]="sec">
-                        {{ i + 1 }}
-                    </div>
-                </div>
-
-                <div class="section-title">
-                    <h4>{{ sections[currentSectionIndex] }}</h4>
-                    <span class="section-count">Step {{ currentSectionIndex + 1 }} of {{ totalSections }}</span>
-                </div>
-
-                <div class="q-progress-bar">
-                    <div class="q-progress-fill" [style.width.%]="sectionProgressPercent()"></div>
                 </div>
             </div>
 
@@ -653,12 +674,71 @@
 
                 <input type="file" #shareFileInput (change)="onShareFileUpload($event)" style="display:none" multiple>
 
+                <div class="new-share-files" *ngIf="newShareFiles.length > 0">
+
+                    <div class="new-share-heading"> Add a clear title for every file </div>
+
+                    <p class="new-share-help">
+                        The AI will use this title to identify and send the correct file.
+                    </p>
+
+                    <div class="new-share-file-card" *ngFor="let item of newShareFiles; let i = index">
+
+                        <div class="new-share-file-info">
+
+                            <span class="new-share-icon">
+                                📎
+                            </span>
+
+                            <div>
+
+                                <div class="new-share-original-name">
+                                    {{ item.name }}
+                                </div>
+
+                                <div class="new-share-size">
+                                    {{ (item.file.size / 1024).toFixed(1) }} KB
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="new-share-title-field">
+
+                            <label>
+                                File Title *
+                            </label>
+
+                            <input type="text" [(ngModel)]="item.title"
+                                placeholder="Example: Website Development Brochure" maxlength="255" />
+
+                        </div>
+
+                        <button type="button" class="remove-file-btn" (click)="removeNewShareFile(i)">
+                            ✕ Remove
+                        </button>
+
+                    </div>
+
+                </div>
+
 
                 <div class="uploaded-files-list" *ngIf="shareableFiles.length">
 
 
                     <div class="uploaded-file-item" *ngFor="let f of shareableFiles">
-                        <div class="file-name"> 📎 {{f.file_name}} </div>
+                        <div class="saved-share-file-info">
+
+                            <div class="file-title">
+                                📎 {{ f.file_title || f.file_name }}
+                            </div>
+
+                            <div class="file-original-name">
+                                {{ f.file_name }}
+                            </div>
+
+                        </div>
 
                         <button type="button" class="remove-file-btn" (click)="deleteShareFile(f.id)"> 🗑 Delete
                         </button>

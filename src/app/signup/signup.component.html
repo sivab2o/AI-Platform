@@ -2,36 +2,160 @@
 
   <div class="row justify-content-center align-items-center w-100">
 
-    <div class="col-11 col-sm-10 col-md-7 col-lg-4">
+    <div class="col-12 col-sm-11 col-lg-11 col-xl-10">
 
       <div class="login-card">
 
         <h2>Create Account ✨</h2>
-        <p class="subtitle">Signup to get started</p>
+        <p class="subtitle" style="color: #1e2673; font-weight: 600;">
+          Your AI Employee is Ready to Join Your Business at an Unbelievable Price!
+        </p>
 
         <form (ngSubmit)="onSubmit()">
 
-          <div class="input-group-custom">
-            <input type="text" [(ngModel)]="name" name="name" required />
-            <label>Name</label>
+          <div class="plans-grid">
+
+            <label class="plan-card" *ngFor="let plan of plans" [class.selected-plan]="selectedPlan === plan.code">
+
+              <input type="radio" name="selectedPlan" [value]="plan.code" [(ngModel)]="selectedPlan" required />
+
+              <span class="plan-name">
+                {{ plan.name }}
+              </span>
+
+              <span class="discount-badge" *ngIf="plan.discountPercent > 0">
+
+                {{ plan.discountPercent }}% OFF
+
+              </span>
+
+              <span class="original-price" *ngIf="plan.discountPercent > 0">
+
+                ₹{{ plan.originalPrice | number }}
+
+              </span>
+
+              <strong class="plan-price">
+                ₹{{ plan.price | number }}
+              </strong>
+
+              <span class="plan-character">
+                {{ plan.speakingSeconds | number }} Seconds of AI Talk Time
+              </span>
+
+              <span class="plan-validity">
+                Valid for {{ plan.validity }}
+              </span>
+
+              <span class="testing-price">
+                Testing Payment ₹{{ plan.testPrice }}
+              </span>
+
+              <ul class="plan-benefits">
+                <li *ngFor="let benefit of plan.benefits">
+                  ✓ {{ benefit }}
+                </li>
+              </ul>
+            </label>
+
           </div>
 
-          <div class="input-group-custom">
-            <input type="email" [(ngModel)]="email" name="email" required />
-            <label>Email</label>
+          <div class="signup-details">
+
+            <h3 class="form-heading">
+              Enter Your Account Details
+            </h3>
+
+            <div class="signup-field">
+              <label for="signupName">
+                Full Name <span>*</span>
+              </label>
+
+              <input id="signupName" type="text" [(ngModel)]="name" name="name" placeholder="Enter your full name"
+                autocomplete="name" required />
+            </div>
+
+            <div class="signup-field">
+              <label for="signupEmail">
+                Email Address <span>*</span>
+              </label>
+
+              <input id="signupEmail" type="email" [(ngModel)]="email" name="email"
+                placeholder="Enter your email address" autocomplete="email" required />
+            </div>
+
+            <div class="signup-field">
+              <label for="signupMobile">
+                Mobile Number <span>*</span>
+              </label>
+
+              <input id="signupMobile" type="tel" [(ngModel)]="mobile" name="mobile"
+                placeholder="Enter your 10-digit mobile number" maxlength="10" inputmode="numeric" autocomplete="tel"
+                required />
+            </div>
+
+            <div class="signup-field">
+              <label for="newPassword">
+                New Password <span>*</span>
+              </label>
+
+              <input id="newPassword" type="password" [(ngModel)]="password" name="password"
+                placeholder="Create a new password" minlength="6" autocomplete="new-password" required />
+            </div>
+
+            <div class="signup-field">
+              <label for="confirmPassword">
+                Confirm New Password <span>*</span>
+              </label>
+
+              <input id="confirmPassword" type="password" [(ngModel)]="confirmPassword" name="confirmPassword"
+                placeholder="Enter the new password again" minlength="6" autocomplete="new-password" required />
+            </div>
+
           </div>
 
-          <div class="input-group-custom">
-            <input type="tel" [(ngModel)]="mobile" name="mobile" required />
-            <label>Mobile Number</label>
-          </div>
+          <div class="terms-section">
 
-          <div class="input-group-custom">
-            <input type="password" [(ngModel)]="password" name="password" required />
-            <label>Password</label>
-          </div>
+  <label class="terms-checkbox">
 
-          <button type="submit">Signup</button>
+    <input
+      type="checkbox"
+      [(ngModel)]="acceptedTerms"
+      name="acceptedTerms"
+      required
+    />
+
+    <span>
+      I have read and accept the
+      <a
+        href="assets/documents/sample_terms_and_conditions.pdf"
+        target="_blank"
+        rel="noopener noreferrer"
+        (click)="$event.stopPropagation()">
+        Terms and Conditions
+      </a>
+    </span>
+
+  </label>
+
+  <p class="terms-warning" *ngIf="!acceptedTerms">
+    Please accept the Terms and Conditions to continue with payment.
+  </p>
+
+</div>
+
+<button
+  type="submit"
+  [disabled]="isProcessing || !acceptedTerms">
+
+            {{
+            isProcessing
+            ? 'Please wait...'
+            : 'Pay ₹' + selectedTestPrice + ' & Signup'
+            }}
+
+          </button>
+
         </form>
 
         <p class="bottom-text">

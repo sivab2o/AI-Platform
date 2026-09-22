@@ -1,0 +1,567 @@
+<div class="dashboard">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <h2>AI Employee</h2>
+
+    <div class="admin-role">
+      Admin Panel
+    </div>
+
+    <ul>
+
+      <li [class.active]="!isPaymentsView" (click)="openAdminDashboard()">
+
+        🏠 Dashboard
+
+      </li>
+
+      <li [class.active]="isPaymentsView" (click)="openAdminPayments()">
+
+        💳 Payments
+
+      </li>
+
+    </ul>
+
+    <button type="button" class="logout-btn" (click)="logout()">
+
+      Logout
+
+    </button>
+
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+
+      <div>
+        <h3>{{ isPaymentsView ? 'Owner Payment Details' : 'Welcome back 👋' }}</h3>
+
+        <p class="page-description">
+          {{ isPaymentsView ? 'View all owner signup payments' : 'Manage all AI Employee owner accounts' }}
+        </p>
+      </div>
+
+      <div class="topbar-right">
+
+        <button type="button" class="refresh-btn" [disabled]="isLoading"
+          (click)="isPaymentsView ? loadPaymentsPage() : refreshDashboard()">
+
+          🔄 {{ isLoading ? 'Loading...' : 'Refresh' }}
+
+        </button>
+
+        <div class="profile">
+          👤 {{ adminName }}
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Error -->
+    <div class="error-message" *ngIf="errorMessage">
+
+      {{ errorMessage }}
+
+    </div>
+
+    <ng-container *ngIf="!isPaymentsView">
+
+      <!-- Summary Cards -->
+      <div class="cards">
+
+        <div class="card">
+          <div class="card-icon owners-icon">
+            👥
+          </div>
+
+          <div>
+            <h4>Total Owners</h4>
+            <p>{{ summary.totalOwners }}</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon active-icon">
+            ✓
+          </div>
+
+          <div>
+            <h4>Active Owners</h4>
+            <p class="active-text">
+              {{ summary.activeOwners }}
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon inactive-icon">
+            ⏸
+          </div>
+
+          <div>
+            <h4>Inactive Owners</h4>
+            <p class="inactive-text">
+              {{ summary.inactiveOwners }}
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon leads-icon">
+            🎯
+          </div>
+
+          <div>
+            <h4>Total Leads</h4>
+            <p>{{ summary.totalGuests }}</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon chats-icon">
+            💬
+          </div>
+
+          <div>
+            <h4>Conversations</h4>
+            <p>{{ summary.totalConversations }}</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon files-icon">
+            📄
+          </div>
+
+          <div>
+            <h4>Shared Files</h4>
+            <p>{{ summary.totalFiles }}</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Owners Table -->
+      <section class="owners-box">
+
+        <div class="owners-header">
+
+          <div>
+            <h3>Registered Owners</h3>
+
+            <p>
+              View and control every owner account
+            </p>
+          </div>
+
+          <div class="filters">
+
+            <input type="text" [(ngModel)]="searchText" (ngModelChange)="filterOwners()"
+              placeholder="Search name, email, mobile or ID" />
+
+            <select [(ngModel)]="selectedStatus" (ngModelChange)="filterOwners()">
+
+              <option value="all">
+                All Statuses
+              </option>
+
+              <option value="active">
+                Active
+              </option>
+
+              <option value="inactive">
+                Inactive
+              </option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+        <div class="loading-box" *ngIf="isLoading">
+
+          <div class="spinner"></div>
+          <p>Loading owner details...</p>
+
+        </div>
+
+        <div class="table-wrapper" *ngIf="!isLoading">
+
+          <table>
+
+            <thead>
+              <tr>
+                <th>Owner</th>
+                <th>Contact</th>
+                <th>Language</th>
+                <th>Leads</th>
+                <th>AI Limit</th>
+                <th>Used</th>
+                <th>Balance</th>
+                <th>Chats</th>
+                <th>Files</th>
+                <th>Connections</th>
+                <th>Joined</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              <tr *ngFor="let owner of filteredOwners">
+
+                <td>
+                  <div class="owner-details">
+
+                    <div class="owner-avatar">
+                      {{
+                      owner.name
+                      ? owner.name.charAt(0).toUpperCase()
+                      : 'O'
+                      }}
+                    </div>
+
+                    <div>
+                      <strong>
+                        {{ owner.name || 'Unnamed Owner' }}
+                      </strong>
+
+                      <small>
+                        {{ owner.user_id }}
+                      </small>
+                    </div>
+
+                  </div>
+                </td>
+
+                <td>
+                  <div class="contact-details">
+
+                    <span>
+                      {{ owner.email }}
+                    </span>
+
+                    <small>
+                      {{ owner.mobile || '-' }}
+                    </small>
+
+                  </div>
+                </td>
+
+                <td>
+                  {{ owner.lang || '-' }}
+                </td>
+
+                <td>
+                  <span class="number-badge">
+                    {{ owner.totalGuests }}
+                  </span>
+                </td>
+
+                <td>
+                  <div class="chat-limit-control">
+
+                    <span class="number-badge">
+                      {{ owner.chat_limit }}
+                    </span>
+
+                  </div>
+                </td>
+
+                <td>
+                  <span class="number-badge">
+                    {{ owner.chats_used }}
+                  </span>
+                </td>
+
+                <td>
+                  <span class="number-badge" [class.inactive-text]="owner.chat_balance === 0"
+                    [class.active-text]="owner.chat_balance > 0">
+
+                    {{ owner.chat_balance }}
+
+                  </span>
+                </td>
+
+                <td>
+                  <span class="number-badge">
+                    {{ owner.totalConversations }}
+                  </span>
+                </td>
+
+                <td>
+                  <span class="number-badge">
+                    {{ owner.totalFiles }}
+                  </span>
+                </td>
+
+                <td>
+                  <div class="connection-details">
+
+                    <span [class.connected]="owner.emailConfigured" [class.not-connected]="!owner.emailConfigured">
+
+                      ● Email
+
+                    </span>
+
+                    <span [class.connected]="owner.whatsappConfigured"
+                      [class.not-connected]="!owner.whatsappConfigured">
+
+                      ● WhatsApp
+
+                    </span>
+
+                  </div>
+                </td>
+
+                <td>
+                  {{ formatDate(owner.created_at) }}
+                </td>
+
+                <td>
+                  <span class="status-badge" [class.status-active]="owner.status === 'active'"
+                    [class.status-inactive]="owner.status === 'inactive'">
+
+                    {{ owner.status }}
+
+                  </span>
+                </td>
+
+                <td>
+                  <button type="button" class="status-button" [class.deactivate-button]="owner.status === 'active'"
+                    [class.activate-button]="owner.status === 'inactive'" [disabled]="updatingOwnerId === owner.id"
+                    (click)="toggleOwnerStatus(owner)">
+
+                    <span *ngIf="updatingOwnerId !== owner.id">
+
+                      {{
+                      owner.status === 'active'
+                      ? 'Deactivate'
+                      : 'Activate'
+                      }}
+
+                    </span>
+
+                    <span *ngIf="updatingOwnerId === owner.id">
+
+                      Updating...
+
+                    </span>
+
+                  </button>
+                </td>
+
+              </tr>
+
+              <tr *ngIf="filteredOwners.length === 0">
+
+                <td colspan="13" class="empty-message">
+
+                  No owners found
+
+                </td>
+
+              </tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </section>
+
+    </ng-container>
+    <!-- All Owner Payments -->
+    <section class="payments-box admin-payments-page" *ngIf="isPaymentsView">
+
+      <div class="payments-header">
+
+        <div>
+          <h3>Owner Payment Details</h3>
+
+          <p>
+            View all successful owner signup payments
+          </p>
+        </div>
+
+        <div class="filters">
+
+          <input type="text" [(ngModel)]="paymentSearchText" (ngModelChange)="filterPayments()"
+            placeholder="Search owner, email, Payment ID or Order ID" />
+
+          <select [(ngModel)]="selectedPaymentStatus" (ngModelChange)="filterPayments()">
+
+            <option value="all">
+              All Payment Statuses
+            </option>
+
+            <option value="captured">
+              Captured
+            </option>
+
+            <option value="authorized">
+              Authorized
+            </option>
+
+            <option value="failed">
+              Failed
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+      <!-- Payment Summary -->
+      <div class="payment-summary">
+
+        <div class="payment-summary-card">
+          <span>Total Payments</span>
+
+          <strong>
+            {{ filteredPayments.length }}
+          </strong>
+        </div>
+
+        <div class="payment-summary-card">
+          <span>Total Amount Received</span>
+
+          <strong>
+            {{ formatAmount(getTotalPaidAmount()) }}
+          </strong>
+        </div>
+
+      </div>
+
+      <div class="payment-table-wrapper">
+
+        <table class="payment-table">
+
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Owner</th>
+              <th>Contact</th>
+              <th>Payment ID</th>
+              <th>Order ID</th>
+              <th>Amount</th>
+              <th>Method</th>
+              <th>Status</th>
+              <th>Paid Date</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            <tr *ngFor="
+            let payment of filteredPayments;
+            let i = index
+          ">
+
+              <td>{{ i + 1 }}</td>
+
+              <td>
+                <div class="payment-owner">
+
+                  <div class="owner-avatar">
+                    {{
+                    payment.ownerName
+                    ? payment.ownerName
+                    .charAt(0)
+                    .toUpperCase()
+                    : 'O'
+                    }}
+                  </div>
+
+                  <div>
+                    <strong>
+                      {{
+                      payment.ownerName ||
+                      'Unnamed Owner'
+                      }}
+                    </strong>
+
+                    <small>
+                      {{ payment.ownerUserId }}
+                    </small>
+                  </div>
+
+                </div>
+              </td>
+
+              <td>
+                <div class="payment-contact">
+                  <span>{{ payment.email }}</span>
+                  <small>{{ payment.mobile || '-' }}</small>
+                </div>
+              </td>
+
+              <td>
+                <span class="transaction-id">
+                  {{ payment.paymentId }}
+                </span>
+              </td>
+
+              <td>
+                <span class="transaction-id">
+                  {{ payment.orderId }}
+                </span>
+              </td>
+
+              <td class="payment-amount">
+                {{ formatAmount(payment.amount) }}
+              </td>
+
+              <td>
+                {{ payment.method || '-' }}
+              </td>
+
+              <td>
+                <span class="payment-status" [class.payment-success]="
+                payment.status === 'captured' ||
+                payment.status === 'authorized'
+              " [class.payment-failed]="
+                payment.status === 'failed'
+              ">
+
+                  {{ payment.status }}
+
+                </span>
+              </td>
+
+              <td>
+                {{ formatDate(payment.paidAt) }}
+              </td>
+
+            </tr>
+
+            <tr *ngIf="filteredPayments.length === 0">
+              <td colspan="9" class="empty-message">
+
+                No payment records found
+
+              </td>
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+  </main>
+
+</div>

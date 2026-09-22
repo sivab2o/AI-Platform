@@ -7,7 +7,18 @@
             <li (click)="Dashboard()">🏠 Dashboard</li>
             <!-- <li (click)="Chat()">💬 Chat</li> -->
             <!-- <li (click)="BasicQuestions()">📝 Basic Questions</li> -->
-            <li class="active" (click)="goBack()">👥 Clients</li>
+            <!-- <li class="active" (click)="goBack()">👥 Clients</li> -->
+            <li routerLink="/clients" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="goBack()">
+
+                👥 Clients
+
+            </li>
+
+            <li routerLink="/payments" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+
+                💳 Payments
+
+            </li>
             <!-- <li (click)="Settings()">⚙ Settings</li> -->
         </ul>
         <button class="logout-btn" (click)="logout()">Logout</button>

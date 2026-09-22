@@ -18,7 +18,7 @@ import {
 @Injectable({
   providedIn: 'root'
 })
-export class AuthGuard implements CanActivate {
+export class AdminGuard implements CanActivate {
 
   constructor(
     private router: Router,
@@ -32,7 +32,8 @@ export class AuthGuard implements CanActivate {
     state: RouterStateSnapshot
   ): boolean {
 
-    // Angular server rendering cannot access localStorage
+    // During Angular server rendering, localStorage
+    // is unavailable. Allow rendering to continue.
     if (!isPlatformBrowser(this.platformId)) {
       return true;
     }
@@ -52,24 +53,18 @@ export class AuthGuard implements CanActivate {
       const user = JSON.parse(storedUser);
 
       if (
-        user.role === 'owner' &&
+        user.role === 'admin' &&
         user.status === 'active'
       ) {
         return true;
       }
 
-      if (
-        user.role === 'admin' &&
-        user.status === 'active'
-      ) {
-        this.router.navigate(['/admin']);
-        return false;
+      if (user.role === 'owner') {
+        this.router.navigate(['/dashboard']);
+      } else {
+        this.router.navigate(['/login']);
       }
 
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-
-      this.router.navigate(['/login']);
       return false;
 
     } catch (error) {

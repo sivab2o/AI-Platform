@@ -44,6 +44,11 @@ export class DashboardComponent implements OnInit {
   masterTrainingText: string = '';
   totalConversations: number = 0;
   totalClients: number = 0;
+  currentPlan: string = '';
+  characterLimit: number = 0;
+  charactersUsed: number = 0;
+  characterBalance: number = 0;
+  subscriptionExpiresAt: string | null = null;
   hotConversations: number = 0;
   coldConversations: number = 0;
   leadHot: number = 0;
@@ -401,36 +406,36 @@ export class DashboardComponent implements OnInit {
     }).catch(() => alert('❌ Save failed'));
   }
 
-  deleteShareFile(id:number){
+  deleteShareFile(id: number) {
 
-    if(!confirm("Delete this file?"))
-    return;
+    if (!confirm("Delete this file?"))
+      return;
 
     this.http.delete(
-    `http://localhost:3000/api/ai/share-file/${id}`
+      `http://localhost:3000/api/ai/share-file/${id}`
     )
-    .subscribe({
+      .subscribe({
 
-        next:()=>{
+        next: () => {
 
-            this.shareableFiles=
+          this.shareableFiles =
             this.shareableFiles.filter(
-            f=>f.id!==id
+              f => f.id !== id
             );
 
-            this.cdr.detectChanges();
+          this.cdr.detectChanges();
 
         },
 
-        error:(err)=>{
+        error: (err) => {
 
-            console.log(err);
+          console.log(err);
 
         }
 
-    });
+      });
 
-}
+  }
 
   changeMasterType() {
     this.sessionExtractedText = '';
@@ -466,155 +471,214 @@ export class DashboardComponent implements OnInit {
     this.shareFileInput.nativeElement.click();
   }
 
-  onShareFileUpload(event: any) {
+  onShareFileUpload(event: any): void {
 
-
-    const files = event.target.files;
-
+    const files: FileList = event.target.files;
 
     if (!files || files.length === 0) {
       return;
     }
 
+    Array.from(files).forEach((file: File) => {
 
+      const exists = this.newShareFiles.some(
+        (item: any) =>
+          item.file.name === file.name &&
+          item.file.size === file.size
+      );
 
-    Array.from(files).forEach((file: any) => {
-
-
-      const exists =
-        this.newShareFiles.some(
-          (f: any) => f.name === file.name
-        );
-
-
-      if (!exists) {
-
-        this.newShareFiles.push({
-
-          name: file.name,
-
-          file: file
-
-        });
-
+      if (exists) {
+        return;
       }
 
+      // Default title from filename without extension
+      const defaultTitle = file.name
+        .replace(/\.[^/.]+$/, '')
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      this.newShareFiles.push({
+
+        title: defaultTitle,
+
+        name: file.name,
+
+        file: file
+
+      });
 
     });
 
-
-
     event.target.value = '';
 
-
-
     console.log(
-      "NEW SHARE FILES:",
+      'NEW SHARE FILES:',
       this.newShareFiles
     );
 
-
+    this.cdr.detectChanges();
   }
 
-  saveShareableFiles() {
+  removeNewShareFile(index: number): void {
 
+    this.newShareFiles.splice(index, 1);
+
+    this.cdr.detectChanges();
+  }
+
+  saveShareableFiles(): void {
 
     if (!this.user || !this.user.user_id) {
 
-      alert("User not found");
+      alert('User not found');
 
-      console.log(
-        "CURRENT USER:",
-        this.user
+      return;
+    }
+
+    if (this.newShareFiles.length === 0) {
+
+      alert('Please select at least one file');
+
+      return;
+    }
+
+    const invalidTitleFile =
+      this.newShareFiles.find(
+        (item: any) =>
+          !item.title ||
+          !item.title.trim()
+      );
+
+    if (invalidTitleFile) {
+
+      alert(
+        `Please enter a title for ${invalidTitleFile.name}`
       );
 
       return;
-
     }
-
 
     const userId = this.user.user_id;
 
+    let completedUploads = 0;
 
-    console.log(
-      "Saving Share Files User:",
-      userId
-    );
+    let failedUploads = 0;
 
+    const totalUploads =
+      this.newShareFiles.length;
 
-    this.newShareFiles.forEach((item: any, index: number) => {
-
+    this.newShareFiles.forEach((item: any) => {
 
       const formData = new FormData();
 
-
       formData.append(
-        "file",
+        'file',
         item.file
       );
 
-
       formData.append(
-        "userId",
+        'userId',
         userId.toString()
       );
 
+      formData.append(
+        'fileTitle',
+        item.title.trim()
+      );
 
       this.http.post(
-        "http://localhost:3000/api/ai/share-file/upload",
+        'http://localhost:3000/api/ai/share-file/upload',
         formData
       )
         .subscribe({
 
-          next: (res: any) => {
+          next: (response: any) => {
 
-            if (index === this.newShareFiles.length - 1) {
-              this.newShareFiles = [];
-            }
+            completedUploads++;
+
             console.log(
-              "FILE UPLOAD SUCCESS",
-              res
+              'FILE UPLOAD SUCCESS:',
+              response
             );
 
+            if (
+              completedUploads + failedUploads ===
+              totalUploads
+            ) {
 
-            Swal.fire({
-
-              icon: 'success',
-
-              title: 'File Saved',
-
-              timer: 1200,
-
-              showConfirmButton: false
-
-            });
-
-
+              this.finishShareFileUpload(
+                failedUploads
+              );
+            }
           },
 
+          error: (error) => {
 
-          error: (err) => {
+            failedUploads++;
 
-
-            console.log(
-              "FILE UPLOAD ERROR",
-              err
+            console.error(
+              'FILE UPLOAD ERROR:',
+              error
             );
 
+            if (
+              completedUploads + failedUploads ===
+              totalUploads
+            ) {
 
-            alert(
-              "File upload failed"
-            );
-
-
+              this.finishShareFileUpload(
+                failedUploads
+              );
+            }
           }
 
         });
-
-
     });
+  }
 
+  private finishShareFileUpload(
+    failedUploads: number
+  ): void {
 
+    if (failedUploads === 0) {
+
+      Swal.fire({
+
+        icon: 'success',
+
+        title: 'Files Saved',
+
+        text:
+          'Shareable files and titles saved successfully.',
+
+        timer: 1600,
+
+        showConfirmButton: false
+
+      });
+
+      this.newShareFiles = [];
+
+      this.loadShareableFiles();
+
+    } else {
+
+      Swal.fire({
+
+        icon: 'warning',
+
+        title: 'Upload Completed',
+
+        text:
+          `${failedUploads} file(s) could not be uploaded.`
+
+      });
+
+      this.loadShareableFiles();
+    }
+
+    this.cdr.detectChanges();
   }
 
   // ✅ Handle drag over
@@ -816,32 +880,32 @@ export class DashboardComponent implements OnInit {
       });
   }
 
-  loadShareableFiles(){
+  loadShareableFiles() {
 
-    const userId=this.user.user_id;
+    const userId = this.user.user_id;
 
     this.http.get<any[]>(
-    `http://localhost:3000/api/ai/share-files/${userId}`
+      `http://localhost:3000/api/ai/share-files/${userId}`
     )
-    .subscribe({
+      .subscribe({
 
-        next:(res)=>{
+        next: (res) => {
 
-            this.shareableFiles=res;
+          this.shareableFiles = res;
 
-            this.cdr.detectChanges();
+          this.cdr.detectChanges();
 
         },
 
-        error:(err)=>{
+        error: (err) => {
 
-            console.log(err);
+          console.log(err);
 
         }
 
-    });
+      });
 
-}
+  }
 
   loadDashboardStats() {
     const userId = this.user?.user_id;
@@ -849,6 +913,19 @@ export class DashboardComponent implements OnInit {
       .then(res => {
         this.totalConversations = res.data.totalConversations;
         this.totalClients = res.data.totalClients;
+        this.currentPlan =
+          res.data.currentPlan || '';
+
+        this.characterLimit =
+          Number(res.data.characterLimit) || 0;
+
+        this.charactersUsed =
+          Number(res.data.charactersUsed) || 0;
+
+        this.characterBalance =
+          Number(res.data.characterBalance) || 0;
+        this.subscriptionExpiresAt =
+          res.data.subscriptionExpiresAt || null;
         // ✅ Lead type counts (Hot 8-10, Warm 5-7, Cold 1-4)
         this.leadHot = res.data.leadHot || 0;
         this.leadWarm = res.data.leadWarm || 0;
@@ -862,12 +939,9 @@ export class DashboardComponent implements OnInit {
     this.questions = [
       // ✅ AI Identity
       { id: 'ai_employee_name', section: 'AI Identity', question: 'AI Employee Name', fieldType: 'text', options: [], mandatory: true, placeholder: 'Example: Kavi / Meena / AI Sales Assistant', value: '' },
-      { id: 'ai_employee_gender', section: 'AI Identity', question: 'AI Employee Gender', fieldType: 'radio', options: ['Male', 'Female', 'Neutral'], mandatory: true, placeholder: '', value: '' },
-      { id: 'ai_goal', section: 'AI Identity', question: 'AI Goal', fieldType: 'textarea', options: [], mandatory: true, placeholder: 'Example: Generate leads, answer customer questions, explain products, collect customer details, book appointments', value: '' },
+      { id: 'ai_goal', section: 'AI Identity', question: 'AI Goal (e.g., Generate Sales, Book Appointments, Create Awareness)', fieldType: 'textarea', options: [], mandatory: true, placeholder: 'Example: Generate leads, answer customer questions, explain products, collect customer details, book appointments', value: '' },
       { id: 'customer_addressing_style', section: 'AI Identity', question: 'How should the AI address customers?', fieldType: 'dropdown', options: ['Friend', 'Boss', 'Thalaivare', 'Dear Customer', 'By Customer Name'], mandatory: true, placeholder: '', value: '' },
       { id: 'ai_introduction_script', section: 'AI Identity', question: 'AI Introduction Script', fieldType: 'textarea', options: [], mandatory: true, placeholder: 'Hi, I am {AI Name}, AI Assistant for {Company Name}. How can I help you today?', value: '' },
-      { id: 'can_suggest_tips', section: 'AI Identity', question: 'Can AI suggest starting tips to customers?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: true, placeholder: '', value: 'Yes' },
-      { id: 'communication_style', section: 'AI Identity', question: 'Communication Style', fieldType: 'dropdown', options: ['Professional', 'Friendly', 'Practical', 'Local Language Style', 'Premium Business Style', 'Sales-Oriented', 'Support-Oriented'], mandatory: true, placeholder: '', value: '' },
       { id: 'response_length', section: 'AI Identity', question: 'How should AI reply?', fieldType: 'dropdown', options: ['Very Short', 'Short', 'Medium', 'Detailed'], mandatory: true, placeholder: '', value: 'Short' },
       { id: 'non_business_talk_allowed', section: 'AI Identity', question: 'Can AI speak about topics not related to business?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: true, placeholder: '', value: 'No' },
 
@@ -886,7 +960,7 @@ export class DashboardComponent implements OnInit {
       {
         id: 'wati_endpoint',
         section: 'Business Information',
-        question: 'WATI API Endpoint',
+        question: 'Whatsapp API Endpoint',
         fieldType: 'url',
         options: [],
         mandatory: false,
@@ -898,7 +972,7 @@ export class DashboardComponent implements OnInit {
       {
         id: 'wati_token',
         section: 'Business Information',
-        question: 'WATI API Token',
+        question: 'Whatsapp API Token',
         fieldType: 'password',
         options: [],
         mandatory: false,
@@ -910,7 +984,7 @@ export class DashboardComponent implements OnInit {
       {
         id: 'wati_template_name',
         section: 'Business Information',
-        question: 'WATI Template Name',
+        question: 'Whatsapp Template Name',
         fieldType: 'text',
         options: [],
         mandatory: false,
@@ -935,14 +1009,10 @@ export class DashboardComponent implements OnInit {
       { id: 'working_days', section: 'Working Hours', question: 'Working Days', fieldType: 'checkbox', options: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], mandatory: true, placeholder: '', value: [] },
       { id: 'office_open_time', section: 'Working Hours', question: 'Office Opening Time', fieldType: 'time', options: [], mandatory: true, placeholder: '09:30', value: '' },
       { id: 'office_close_time', section: 'Working Hours', question: 'Office Closing Time', fieldType: 'time', options: [], mandatory: true, placeholder: '18:30', value: '' },
-      { id: 'holiday_response', section: 'Working Hours', question: 'Holiday / After-hours Response Message', fieldType: 'textarea', options: [], mandatory: false, placeholder: 'Thanks for contacting us. Our office is currently closed. We will respond during working hours.', value: '' },
 
       // ✅ Customer Handling
-      { id: 'max_chat_duration', section: 'Customer Handling', question: 'Maximum time AI can talk/chat to one customer', fieldType: 'dropdown', options: ['3 Minutes', '5 Minutes', '10 Minutes', 'No Limit'], mandatory: true, placeholder: '', value: '5 Minutes' },
-      { id: 'max_messages_before_transfer', section: 'Customer Handling', question: 'Maximum messages before transfer to human', fieldType: 'dropdown', options: ['5 Messages', '10 Messages', '20 Messages', 'No Limit'], mandatory: true, placeholder: '', value: '10 Messages' },
       { id: 'collect_contact', section: 'Customer Handling', question: 'Should AI collect customer contact details?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: true, placeholder: '', value: 'Yes' },
       { id: 'collect_location', section: 'Customer Handling', question: 'Should AI collect customer location?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: false, placeholder: '', value: 'Yes' },
-      { id: 'qualify_lead', section: 'Customer Handling', question: 'Should AI qualify leads before transfer?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: true, placeholder: '', value: 'Yes' },
       { id: 'schedule_appointment', section: 'Customer Handling', question: 'Can AI schedule appointments?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: true, placeholder: '', value: 'Yes' },
       { id: 'ask_budget', section: 'Customer Handling', question: 'Can AI ask customer budget range?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: false, placeholder: '', value: 'Yes' },
       { id: 'ask_urgency', section: 'Customer Handling', question: 'Can AI ask customer urgency/timeline?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: true, placeholder: '', value: 'Yes' },
@@ -951,20 +1021,11 @@ export class DashboardComponent implements OnInit {
       { id: 'responsible_person_required', section: 'Human Escalation', question: 'Need responsible person mobile number?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: true, placeholder: '', value: 'Yes' },
       { id: 'responsible_person_name', section: 'Human Escalation', question: 'Responsible Person Name', fieldType: 'text', options: [], mandatory: true, placeholder: 'Example: Sales Manager', value: '' },
       { id: 'responsible_person_mobile', section: 'Human Escalation', question: 'Responsible Person Mobile Number', fieldType: 'phone', options: [], mandatory: true, placeholder: 'Example: +91 98765 43210', value: '' },
-      { id: 'backup_person_name', section: 'Human Escalation', question: 'Backup Responsible Person Name', fieldType: 'text', options: [], mandatory: false, placeholder: 'Example: Office Admin', value: '' },
-      { id: 'backup_person_mobile', section: 'Human Escalation', question: 'Backup Mobile Number', fieldType: 'phone', options: [], mandatory: false, placeholder: 'Example: +91 98765 43210', value: '' },
-      { id: 'transfer_rules', section: 'Human Escalation', question: 'Transfer customer to human when', fieldType: 'checkbox', options: ['Customer asks price negotiation', 'Customer asks technical question', 'Customer asks for owner', 'Customer requests callback', 'Customer wants appointment', 'Customer is angry', 'Customer complaint received', 'Customer ready to buy', 'AI unable to answer', 'Payment issue', 'Legal/medical/financial sensitive question'], mandatory: true, placeholder: '', value: [] },
 
       // ✅ Greetings
       { id: 'closing_style', section: 'Greetings', question: 'End Conversation Style', fieldType: 'dropdown', options: ['Thanks for Contacting Us', 'Have a Great Day', 'Looking Forward to Serving You', 'Happy Investing', 'Happy Shopping', 'Happy Learning', 'Safe Travels', 'Healthy Living', 'Custom Closing Message'], mandatory: true, placeholder: '', value: 'Thanks for Contacting Us' },
 
       // ✅ AI Rules
-      { id: 'can_share_pricing', section: 'AI Rules', question: 'Can AI share pricing?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: true, placeholder: '', value: 'Yes' },
-      { id: 'can_share_offers', section: 'AI Rules', question: 'Can AI share offers/discounts?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: true, placeholder: '', value: 'Yes' },
-      { id: 'can_share_owner_contact', section: 'AI Rules', question: 'Can AI share owner contact details?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: true, placeholder: '', value: 'No' },
-      { id: 'can_repeat_customer_name', section: 'AI Rules', question: 'Can AI call customer by name repeatedly?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: false, placeholder: '', value: 'No' },
-      { id: 'auto_followup', section: 'AI Rules', question: 'Can AI follow up automatically?', fieldType: 'yes_no', options: ['Yes', 'No'], mandatory: true, placeholder: '', value: 'Yes' },
-      { id: 'followup_frequency', section: 'AI Rules', question: 'Follow-up Frequency', fieldType: 'dropdown', options: ['Same Day', 'Daily', 'Every 2 Days', 'Every 3 Days', 'Weekly', 'Custom'], mandatory: false, placeholder: '', value: 'Every 2 Days' },
       { id: 'additional_ai_instructions', section: 'AI Rules', question: 'Additional Instructions to AI', fieldType: 'textarea', options: [], mandatory: false, placeholder: 'Always be polite. Never argue. Focus on converting leads into appointments.', value: '' },
     ];
     this.currentSectionIndex = 0;

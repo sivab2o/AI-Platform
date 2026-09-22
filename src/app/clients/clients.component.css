@@ -1,36 +1,36 @@
-/* Layout */
 .dashboard {
     display: flex;
-    min-height: 100vh;
+    min-height: 100vh
 }
 
-/* Sidebar */
 .sidebar {
     width: 250px;
     background: #1e2673;
-    color: white;
+    color: #fff;
     padding: 20px;
+    box-sizing: border-box
 }
 
 .sidebar h2 {
-    margin-bottom: 30px;
+    margin: 0 0 30px
 }
 
 .sidebar ul {
     list-style: none;
     padding: 0;
+    margin: 0
 }
 
-.sidebar ul li {
+.sidebar li {
     padding: 12px;
     margin-bottom: 10px;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: 6px
 }
 
-.sidebar ul li:hover,
+.sidebar li:hover,
 .sidebar .active {
-    background: #DD1977;
+    background: #DD1977
 }
 
 .logout-btn {
@@ -38,44 +38,43 @@
     width: 100%;
     padding: 10px;
     background: #DD1977;
-    border: none;
-    color: white;
+    border: 0;
+    color: #fff;
     border-radius: 6px;
-    cursor: pointer;
+    cursor: pointer
 }
 
-/* Main Content */
 .main {
     flex: 1;
     padding: 20px;
     background: #f5f6fa;
     min-width: 0;
+    box-sizing: border-box
 }
 
-/* Topbar */
 .topbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    margin-bottom: 20px;
+    margin-bottom: 20px
 }
 
 .profile {
     background: #DD1977;
-    color: white;
+    color: #fff;
     padding: 6px 12px;
-    border-radius: 20px;
+    border-radius: 20px
 }
 
-/* ✅ Toolbar */
-.clients-toolbar {
+.clients-toolbar,
+.payment-toolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
     gap: 16px;
-    flex-wrap: wrap;
+    flex-wrap: wrap
 }
 
 .search-box input {
@@ -83,145 +82,134 @@
     border: 1.5px solid #ddd;
     border-radius: 8px;
     font-size: 14px;
-    outline: none;
+    outline: 0;
     width: 300px;
-    font-family: inherit;
-    box-sizing: border-box;
+    box-sizing: border-box
 }
 
 .search-box input:focus {
-    border-color: #DD1977;
+    border-color: #DD1977
 }
 
 .client-count {
     font-size: 14px;
-    color: #555;
+    color: #555
 }
 
-/* ✅ Loading */
 .loading-box {
     text-align: center;
     padding: 40px;
-    color: #888;
+    color: #888
 }
 
 .spinner {
     width: 40px;
     height: 40px;
     border: 4px solid #eee;
-    border-top: 4px solid #DD1977;
+    border-top-color: #DD1977;
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 12px;
+    animation: spin .8s linear infinite;
+    margin: 0 auto 12px
 }
 
 @keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
+    to {
+        transform: rotate(360deg)
     }
 }
 
-/* ✅ Empty */
 .empty-box {
     text-align: center;
     padding: 60px;
     color: #aaa;
-    font-size: 16px;
-    background: white;
-    border-radius: 10px;
+    background: #fff;
+    border-radius: 10px
 }
 
-/* ✅ Table wrapper */
-.table-wrapper {
-    background: white;
+.table-wrapper,
+.payment-table-wrapper {
+    background: #fff;
     border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .06)
 }
 
 .clients-table {
-   width: max-content;
+    width: max-content;
     min-width: 1400px;
     border-collapse: collapse;
-    font-size: 14px;
+    font-size: 14px
 }
 
-.clients-table thead tr {
+.clients-table thead tr,
+.payment-table thead {
     background: linear-gradient(135deg, #1e2673, #DD1977);
-    color: white;
+    color: #fff
 }
 
-.clients-table th {
-    padding: 14px 16px;
-    text-align: left;
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-.clients-table tbody tr {
-    border-bottom: 1px solid #f0f0f0;
-    transition: background 0.15s;
-}
-
-.clients-table tbody tr:hover {
-    background: #fef6f9;
-}
-
-.clients-table td {
+.clients-table th,
+.clients-table td,
+.payment-table th,
+.payment-table td {
     padding: 12px 16px;
-    color: #444;
-    vertical-align: middle;
+    text-align: left;
+    vertical-align: middle
 }
 
-/* ✅ Client name with avatar */
+.clients-table th,
+.payment-table th {
+    padding-top: 14px;
+    padding-bottom: 14px;
+    font-weight: 600;
+    white-space: nowrap
+}
+
+.clients-table tbody tr,
+.payment-table tbody tr {
+    border-bottom: 1px solid #f0f0f0
+}
+
+.clients-table tbody tr:hover,
+.payment-table tbody tr:hover {
+    background: #fef6f9
+}
+
 .client-name {
     display: flex;
     align-items: center;
     gap: 10px;
     font-weight: 500;
-    white-space: nowrap;
+    white-space: nowrap
 }
 
 .client-avatar {
     width: 34px;
     height: 34px;
     background: linear-gradient(135deg, #1e2673, #DD1977);
-    color: white;
+    color: #fff;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
     font-weight: 700;
-    flex-shrink: 0;
+    flex-shrink: 0
 }
 
 small {
     color: #aaa;
-    font-size: 11px;
+    font-size: 11px
 }
 
 .view-btn {
     padding: 6px 14px;
     background: linear-gradient(135deg, #1e2673, #DD1977);
-    color: white;
-    border: none;
+    color: #fff;
+    border: 0;
     border-radius: 6px;
     cursor: pointer;
     font-size: 12px;
     font-weight: 600;
-    transition: opacity 0.2s;
-    white-space: nowrap;
-}
-
-.view-btn:hover {
-    opacity: 0.85;
+    white-space: nowrap
 }
 
 .action-btn {
@@ -231,90 +219,111 @@ small {
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    text-decoration: none;
-    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none
 }
 
 .action-btn:hover {
-    transform: scale(1.15);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: scale(1.15)
 }
 
 .call-btn {
-    background: #e8eaf6;
+    background: #e8eaf6
 }
 
 .whatsapp-btn {
-    background: #e8f5e9;
+    background: #e8f5e9
 }
 
-.recommend-badge {
-    padding: 4px 10px;
+.recommend-badge,
+.lead-badge,
+.score-badge {
+    display: inline-block;
     border-radius: 20px;
     font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
+    text-align: center
+}
+
+.recommend-badge {
+    padding: 4px 10px
 }
 
 .recommend-badge.yes {
     background: #e8f5e9;
-    color: #2e7d32;
+    color: #2e7d32
 }
 
 .recommend-badge.no {
     background: #fce4ec;
-    color: #c62828;
+    color: #c62828
 }
 
 .client-summary {
     font-size: 12px;
     color: #555;
-    max-width: 220px;
+    max-width: 220px
 }
 
 .summary-text p {
     margin: 0 0 2px;
-    line-height: 1.4;
+    line-height: 1.4
 }
 
 .no-summary {
     color: #aaa;
-    font-style: italic;
+    font-style: italic
 }
 
 .score-badge {
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 700;
-    color: white;
-    white-space: nowrap;
+    min-width: 70px;
+    padding: 8px 14px;
+    color: #fff
 }
 
 .score-hot {
-    background: #e53935;
+    background: #e53935
 }
 
 .score-warm {
-    background: #fb8c00;
+    background: #fb8c00
 }
 
 .score-cold {
-    background: #1e88e5;
+    background: #1e88e5
 }
 
-/* ✅ Mobile Cards - hidden by default */
+.lead-badge {
+    min-width: 80px;
+    padding: 7px 16px
+}
+
+.lead-hot {
+    background: #fee2e2;
+    color: #dc2626
+}
+
+.lead-warm {
+    background: #fef3c7;
+    color: #d97706
+}
+
+.lead-cold {
+    background: #dbeafe;
+    color: #2563eb
+}
+
 .mobile-cards {
     display: none;
     flex-direction: column;
-    gap: 14px;
+    gap: 14px
 }
 
 .mobile-card {
-    background: white;
+    background: #fff;
     border-radius: 12px;
     padding: 16px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .07)
 }
 
 .mobile-card-header {
@@ -323,26 +332,22 @@ small {
     gap: 12px;
     margin-bottom: 14px;
     padding-bottom: 12px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #f0f0f0
 }
 
 .mobile-card-header .client-avatar {
     width: 42px;
-    height: 42px;
-    font-size: 16px;
+    height: 42px
 }
 
-.mobile-card-header .client-info h4 {
+.mobile-card-header h4 {
     margin: 0;
-    font-size: 15px;
-    color: #1e2673;
-    font-weight: 700;
+    color: #1e2673
 }
 
-.mobile-card-header .client-info p {
+.mobile-card-header p {
     margin: 2px 0 0;
-    font-size: 13px;
-    color: #888;
+    color: #888
 }
 
 .mobile-card-row {
@@ -351,12 +356,7 @@ small {
     align-items: flex-start;
     padding: 8px 0;
     border-bottom: 1px solid #f9f9f9;
-    gap: 16px;
-}
-
-.mobile-card-row:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
+    gap: 16px
 }
 
 .mobile-card-label {
@@ -364,23 +364,13 @@ small {
     font-weight: 600;
     color: #aaa;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    min-width: 120px;
-    flex-shrink: 0;
-    padding-top: 2px;
+    min-width: 120px
 }
 
 .mobile-card-value {
     font-size: 13px;
     color: #444;
-    text-align: left;
-    flex: 1;
-}
-
-.mobile-card-value .summary-text p {
-    text-align: left;
-    font-size: 12px;
-    margin: 0 0 2px;
+    flex: 1
 }
 
 .mobile-card-actions {
@@ -390,158 +380,187 @@ small {
     padding-top: 12px;
     border-top: 1px solid #f0f0f0;
     justify-content: space-between;
-    align-items: center;
+    align-items: center
 }
 
-/* ✅ Large desktop */
-@media (min-width: 1200px) {
+.payments-section {
+    width: 100%
+}
+
+.payment-toolbar h2 {
+    margin: 0 0 5px;
+    color: #1e2673;
+    font-size: 24px
+}
+
+.payment-toolbar p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px
+}
+
+.payment-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 20px
+}
+
+.payment-summary-card {
+    padding: 22px;
+    background: linear-gradient(135deg, #fff, #fff5fa);
+    border: 1px solid #f2d4e3;
+    border-radius: 14px;
+    box-shadow: 0 5px 18px rgba(30, 38, 115, .08)
+}
+
+.payment-summary-card span {
+    display: block;
+    margin-bottom: 10px;
+    color: #6b7280;
+    font-size: 14px
+}
+
+.payment-summary-card strong {
+    color: #1e2673;
+    font-size: 25px
+}
+
+.payment-table {
+    width: 100%;
+    min-width: 950px;
+    border-collapse: collapse
+}
+
+.transaction-id {
+    color: #374151;
+    font-family: monospace;
+    font-size: 13px
+}
+
+.payment-amount {
+    color: #1e2673;
+    font-size: 16px;
+    font-weight: 700
+}
+
+.payment-status {
+    display: inline-block;
+    padding: 6px 12px;
+    color: #9a3412;
+    background: #ffedd5;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: capitalize
+}
+
+.payment-status.payment-success {
+    color: #166534;
+    background: #dcfce7
+}
+
+.payment-error {
+    margin-bottom: 18px;
+    padding: 14px 18px;
+    color: #b91c1c;
+    background: #fee2e2;
+    border-radius: 8px
+}
+
+@media(max-width:1199px) {
     .sidebar {
-        width: 250px;
+        width: 200px
     }
 }
 
-/* ✅ Tablet landscape (992px-1199px) */
-@media (max-width: 1199px) {
-    .sidebar {
-        width: 200px;
-    }
-}
-
-/* ✅ Tablet portrait (600px-991px) - table with scroll */
-@media (max-width: 991px) {
+@media(max-width:991px) {
     .dashboard {
-        flex-direction: column;
+        flex-direction: column
     }
 
     .sidebar {
         width: 100%;
-        text-align: center;
+        text-align: center
     }
 
     .sidebar ul {
         display: flex;
         flex-wrap: wrap;
-        justify-content: center;
+        justify-content: center
     }
 
-    .sidebar ul li {
+    .sidebar li {
         flex: 1 1 40%;
-        margin: 5px;
+        margin: 5px
     }
 
     .topbar {
         flex-direction: column;
         align-items: flex-start;
-        gap: 10px;
+        gap: 10px
     }
 
     .search-box input {
-        width: 100%;
-        max-width: 100%;
+        width: 100%
     }
 
-    .clients-toolbar {
+    .clients-toolbar,
+    .payment-toolbar {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-
-    /* ✅ Keep table but scrollable */
-    .table-wrapper {
-        display: block;
-        overflow-x: auto;
+        align-items: flex-start
     }
 
     .clients-table {
-        min-width: 750px;
-    }
-
-    .mobile-cards {
-        display: none;
+        min-width: 750px
     }
 }
 
-/* ✅ Mobile (≤480px) - card layout */
-@media (max-width: 480px) {
+@media(max-width:768px) {
+    .payment-summary {
+        grid-template-columns: 1fr
+    }
+
+    .payment-toolbar .search-box {
+        width: 100%
+    }
+}
+
+@media(max-width:480px) {
     .table-wrapper {
-        display: none;
+        display: none
     }
 
     .mobile-cards {
-        display: flex;
+        display: flex
+    }
+
+    .payment-table-wrapper {
+        display: block
+    }
+
+    .main {
+        padding: 14px
     }
 }
 
-@media (max-width: 768px) {
-
-    th:nth-child(4),
-    td:nth-child(4),
-    th:nth-child(5),
-    td:nth-child(5) {
-        display: none;
-    }
+.report-btn {
+  padding: 7px 14px;
+  background: #15803d;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.lead-badge {
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
+.report-btn:hover:not(:disabled) {
+  background: #166534;
 }
 
-.lead-hot {
-    background: #fee2e2;
-    color: #dc2626;
-}
-
-.lead-warm {
-    background: #fef3c7;
-    color: #d97706;
-}
-
-.lead-cold {
-    background: #dbeafe;
-    color: #2563eb;
-}
-
-/* Increase column widths */
-
-.clients-table th:nth-child(8),
-.clients-table td:nth-child(8) {
-    min-width: 130px;
-    width: 130px;
-    text-align: center;
-}
-
-/* Lead Type (Hot/Warm/Cold) */
-.clients-table th:nth-child(9),
-.clients-table td:nth-child(9) {
-    min-width: 120px;
-    width: 120px;
-    text-align: center;
-}
-
-/* Interest Score */
-.clients-table th:nth-child(8),
-.clients-table td:nth-child(8) {
-    min-width: 140px;
-}
-
-
-/* Badge size */
-.score-badge {
-    display: inline-block;
-    min-width: 70px;
-    text-align: center;
-    padding: 8px 14px;
-}
-
-
-/* Hot/Warm/Cold badge */
-.lead-badge {
-    display: inline-block;
-    min-width: 80px;
-    text-align: center;
-    padding: 7px 16px;
+.report-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }

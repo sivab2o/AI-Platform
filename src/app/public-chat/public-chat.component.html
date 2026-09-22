@@ -126,17 +126,31 @@
 
         <div class="email-box" *ngIf="showEmailBox">
 
-
-            <h3>
-                Enter your email id or WhatsApp number
+            <h3 *ngIf="requestedSharingChannel === 'email'">
+                Enter your email address
             </h3>
 
+            <h3 *ngIf="requestedSharingChannel === 'whatsapp'">
+                Enter your WhatsApp number
+            </h3>
 
-            <input type="text" [(ngModel)]="customerEmail" placeholder="Enter email id or WhatsApp number" />
+            <h3 *ngIf="requestedSharingChannel === null">
+                Enter your email address or WhatsApp number
+            </h3>
+
+            <input type="email" *ngIf="requestedSharingChannel === 'email'" [(ngModel)]="customerEmail"
+                placeholder="Enter your email address" />
+
+            <input type="tel" *ngIf="requestedSharingChannel === 'whatsapp'" [(ngModel)]="customerEmail"
+                placeholder="Enter 10-digit WhatsApp number" maxlength="10" />
+
+            <input type="text" *ngIf="requestedSharingChannel === null" [(ngModel)]="customerEmail"
+                placeholder="Enter email address or WhatsApp number" />
 
             <button (click)="submitCustomerEmail()">
                 Send Details
             </button>
+
         </div>
 
         <!-- Step 3: Voice Only Mode -->

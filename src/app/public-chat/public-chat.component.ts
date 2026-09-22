@@ -30,10 +30,19 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
   guestMobile: string = '';
   guestId: string = '';
   showEmailBox: boolean = false;
+  emailSharingAvailable: boolean = false;
+  whatsappSharingAvailable: boolean = false;
+  requestedSharingChannel:
+    'email' | 'whatsapp' | null = null;
   emailSentSuccessfully = false;
   customerEmail: string = '';
   emailForDetails: string = '';
   lastCustomerMessage: string = '';
+  pendingFileRequest: string = '';
+  pendingMatchedFiles: {
+    id: number;
+    title: string;
+  }[] = [];
   waitingForEmail: boolean = false;
   isVoiceMode: boolean = false;
 
@@ -1105,11 +1114,11 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       this.mediaRecorder.state
     );
 
-
+    this.isSpeaking = false;
+    this.isTyping = false;
     this.isListening = true;
 
-    this.cdr.detectChanges();
-
+    this.updateVoiceStatus();
 
     this.startVAD(stream);
 
@@ -1632,33 +1641,80 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       const blocked = [
 
         "welcome",
-        "thank you",
-        "whatsapp marketing",
-        "website development",
-        "google ads",
-        "meta ads"
+        // "thank you",
+        // "whatsapp marketing",
+        // "website development",
+        // "google ads",
+        // "meta ads"
 
       ];
 
 
 
-      const lower =
-        transcript.toLowerCase();
+      const lower = transcript
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      const whisperPromptTerms = [
+        'price',
+        'rate',
+        'offer',
+        'discount',
+        'delivery',
+        'booking',
+        'appointment',
+        'timing',
+        'whatsapp',
+        'emi',
+        'gst',
+        'products',
+        'services',
+        'website development',
+        'meta ads',
+        'google ads',
+        'whatsapp marketing',
+        'digital marketing'
+      ];
+
+      const matchedPromptTerms =
+        whisperPromptTerms.filter(term =>
+          lower.includes(term)
+        );
+
+      const isSingleEcho =
+        transcript.length < 40 &&
+        blocked.some(item => lower === item);
+
+      const isVocabularyPromptEcho =
+        matchedPromptTerms.length >= 3;
 
       if (
-        transcript.length < 40 &&
-        blocked.some(
-          x => lower === x
-        )
+        isSingleEcho ||
+        isVocabularyPromptEcho
       ) {
 
         console.log(
-          "🔇 POSSIBLE ECHO:",
+          '🔇 WHISPER HALLUCINATION BLOCKED:',
           transcript
         );
 
-        return;
+        // Do not display or send this text to chat.
+        setTimeout(() => {
 
+          if (
+            !this.isSpeaking &&
+            !this.isTyping &&
+            !this.micManuallyStopped
+          ) {
+
+            this.beginRecognition(true);
+          }
+
+        }, 300);
+
+        return;
       }
 
       console.log(
@@ -1980,6 +2036,16 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       if (this.speechRequestId !== myId) { resolve(); return; }
 
       const audio = new Audio(src);
+
+      /*
+       * Additional browser playback speed.
+       * OpenAI creates the voice at 1.30 speed.
+       * Browser plays it slightly faster for natural conversation.
+       */
+      audio.playbackRate = 1.10;
+      audio.defaultPlaybackRate = 1.10;
+      audio.preservesPitch = true;
+
       this.currentAudio = audio;
 
       const watchdog = setTimeout(() => {
@@ -2015,8 +2081,12 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
 
           const durMs =
             (isFinite(audio.duration) && audio.duration > 0)
-              ? audio.duration * 1000
-              : Math.max(1500, chunkText.length * 80);
+              ? (audio.duration * 1000) / audio.playbackRate
+              : Math.max(
+                1200,
+                (chunkText.length * 65) /
+                audio.playbackRate
+              );
 
           onPlayStart(durMs);
 
@@ -2069,7 +2139,12 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       ttsPromises.push(
         this.fetchTTS(chunks[0])
       );
+
+      this.isListening = false;
+      this.isTyping = false;
       this.isSpeaking = true;
+
+      this.updateVoiceStatus();
 
 
       // ✅ During AI speech:
@@ -2314,28 +2389,24 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
         new Date().toLocaleTimeString()
       );
 
-
       const reply = res.data.reply;
 
-
-      console.log("AI reply:", reply);
+      this.updatePendingFileContext(
+        res.data
+      );
 
 
       // Save the customer request before input is cleared
       this.lastCustomerMessage = msg;
-
 
       console.log(
         "CUSTOMER REQUEST SAVED:",
         this.lastCustomerMessage
       );
 
-
-      this.checkEmailRequest(reply);
-
+      this.checkEmailRequest(res.data);
 
       this.isTyping = false;
-
 
       this.updateVoiceStatus();
       this.speakReply(
@@ -2425,11 +2496,11 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
 
       );
 
-
-
       this.isTyping = false;
 
-
+      this.updatePendingFileContext(
+        res.data
+      );
       // Save customer request for email sharing
       this.lastCustomerMessage = msg;
 
@@ -2440,8 +2511,7 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
       );
 
 
-      // Check if AI is asking customer email
-      this.checkEmailRequest(res.data.reply);
+      this.checkEmailRequest(res.data);
 
 
       this.speakReply(
@@ -2551,467 +2621,478 @@ export class PublicChatComponent implements OnInit, AfterViewChecked {
 
   }
 
-  private checkEmailRequest(reply: string) {
-    if (!reply) {
-      return;
-    }
+  private checkEmailRequest(responseData: any): void {
 
-    const replyText = reply.toLowerCase();
-    const customerText = (this.lastCustomerMessage || '').toLowerCase();
+    const availability =
+      responseData?.sharingAvailability || {};
 
-    const emailKeywords = [
-      "email",
-      "mail",
-      "email address",
-      "மெயில்",
-      "இமெயில்",
-      "மின்னஞ்சல்",
-      "மின்னஞ்சல் முகவரி",
-      "மின்னஞ்சல் அடையாளம்"
-    ];
+    const requestedAction =
+      responseData?.action || null;
 
-    const whatsappKeywords = [
-      "whatsapp",
-      "whats app",
-      "வாட்சப்",
-      "வாட்சப்பில்",
-      "வாட்சப்புக்கு",
-      "வாட்சப் நம்பர்",
-      "வாட்ஸ்அப்",
-      "வாட்ஸ்அப்பில்",
-      "வாட்ஸ்அப்புக்கு",
-      "வாட்ஸ்அப் நம்பர்"
-    ];
+    const requestedChannel =
+      requestedAction === 'collect_contact'
+        ? responseData?.requestedSharingChannel || null
+        : null;
 
-    const isEmailRequest =
-      emailKeywords.some(word =>
-        replyText.includes(word) ||
-        customerText.includes(word)
-      );
+    this.emailSharingAvailable =
+      availability.emailAvailable === true;
 
-    const isWhatsappRequest =
-      whatsappKeywords.some(word =>
-        replyText.includes(word) ||
-        customerText.includes(word)
-      );
+    this.whatsappSharingAvailable =
+      availability.whatsappAvailable === true;
 
-    const isSharingRequest =
-      isEmailRequest || isWhatsappRequest;
+    this.requestedSharingChannel = null;
+    this.showEmailBox = false;
 
-    console.log("AI reply:", replyText);
-    console.log("Customer message:", customerText);
-    console.log("Email detected:", isEmailRequest);
-    console.log("WhatsApp detected:", isWhatsappRequest);
-    console.log("Sharing request detected:", isSharingRequest);
+    if (
+      requestedChannel === 'email' &&
+      this.emailSharingAvailable
+    ) {
 
-    if (isSharingRequest && !this.emailSentSuccessfully) {
+      this.requestedSharingChannel = 'email';
       this.showEmailBox = true;
-      this.cdr.detectChanges();
 
-      console.log("Showing email / WhatsApp input box");
+    } else if (
+      requestedChannel === 'whatsapp' &&
+      this.whatsappSharingAvailable
+    ) {
+
+      this.requestedSharingChannel = 'whatsapp';
+      this.showEmailBox = true;
+
+    } else if (requestedChannel === 'both') {
+
+      if (
+        this.emailSharingAvailable &&
+        this.whatsappSharingAvailable
+      ) {
+
+        this.requestedSharingChannel = null;
+        this.showEmailBox = true;
+
+      } else if (this.emailSharingAvailable) {
+
+        this.requestedSharingChannel = 'email';
+        this.showEmailBox = true;
+
+      } else if (this.whatsappSharingAvailable) {
+
+        this.requestedSharingChannel = 'whatsapp';
+        this.showEmailBox = true;
+      }
     }
-  }
-
-  submitCustomerEmail() {
-    console.log("SEND BUTTON CLICKED");
 
     console.log(
-      "EMAIL ENTERED:",
-      this.customerEmail
+      'Email available:',
+      this.emailSharingAvailable
     );
 
-    if (!this.customerEmail) {
+    console.log(
+      'WhatsApp available:',
+      this.whatsappSharingAvailable
+    );
 
-      alert('Please enter email id or WhatsApp number');
+    console.log(
+      'Requested channel:',
+      requestedChannel
+    );
 
+    console.log(
+      'Input box visible:',
+      this.showEmailBox
+    );
+
+    this.cdr.detectChanges();
+  }
+
+  private updatePendingFileContext(
+    responseData: any
+  ): void {
+
+    const fileRequestQuery =
+      String(
+        responseData?.fileRequestQuery || ''
+      ).trim();
+
+    const matchedFiles =
+      Array.isArray(responseData?.matchedFiles)
+
+        ? responseData.matchedFiles
+
+        : [];
+
+    if (!fileRequestQuery) {
       return;
-
     }
 
+    this.pendingFileRequest =
+      fileRequestQuery;
 
-    // Detect WhatsApp number
+    this.pendingMatchedFiles =
+      matchedFiles;
 
-    const isWhatsappNumber =
-      /^[0-9]{10}$/.test(
-        this.customerEmail
+    console.log(
+      'PENDING FILE REQUEST:',
+      this.pendingFileRequest
+    );
+
+    console.log(
+      'PENDING MATCHED FILES:',
+      this.pendingMatchedFiles
+    );
+  }
+
+  async submitCustomerEmail(): Promise<void> {
+
+    console.log('SEND BUTTON CLICKED');
+
+    const enteredValue =
+      String(this.customerEmail || '').trim();
+
+    if (!enteredValue) {
+
+      alert(
+        this.requestedSharingChannel === 'email'
+          ? 'Please enter your email address'
+          : this.requestedSharingChannel === 'whatsapp'
+            ? 'Please enter your WhatsApp number'
+            : 'Please enter your email address or WhatsApp number'
       );
-
-
-    if (isWhatsappNumber) {
-
-
-      console.log(
-        "Sending WhatsApp:",
-        this.customerEmail
-      );
-
-
-      const whatsappData = {
-
-        ownerId: this.ownerId,
-
-        customerNumber:
-          this.customerEmail,
-
-        customerName:
-          this.guestName,
-
-        message:
-          this.lastCustomerMessage
-
-
-      };
-
-
-
-      axios.post(
-
-        'http://localhost:3000/api/ai/send-details-whatsapp',
-
-        whatsappData
-
-      )
-
-        .then(res => {
-
-
-          console.log(
-            "WHATSAPP SENT",
-            res.data
-          );
-
-
-
-          const sentWhatsapp =
-            this.customerEmail;
-
-
-
-          this.showEmailBox = false;
-
-          this.customerEmail = '';
-
-
-
-          const whatsappReply =
-            'சரி, உங்க WhatsApp number-க்கு கேட்ட details அனுப்பிட்டேன்.';
-
-
-
-          this.addBotMessage(
-            whatsappReply
-          );
-
-
-
-          this.speakReply(
-
-            whatsappReply,
-
-            () => {
-
-              this.autoStartListening();
-
-            },
-
-            false,
-
-            true
-
-          );
-
-
-
-          // save conversation
-
-          axios.post(
-
-            'http://localhost:3000/api/ai/guest/save-email-conversation',
-
-            {
-
-              ownerId:
-                this.ownerId,
-
-
-              guestId:
-                this.guestId,
-
-
-              guestName:
-                this.guestName,
-
-
-              email:
-                sentWhatsapp,
-
-
-              request:
-                this.lastCustomerMessage,
-
-
-              reply:
-                whatsappReply
-
-            }
-
-          );
-
-
-        })
-
-        .catch(err => {
-
-
-          console.error(
-            "WHATSAPP ERROR",
-            err
-          );
-
-
-          alert(
-            "WhatsApp sending failed"
-          );
-
-
-        });
-
 
       return;
-
     }
-
 
     const emailPattern =
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-
-    if (!emailPattern.test(this.customerEmail)) {
-
-      alert('Please enter valid email address');
-
-      return;
-    }
-
-
-
-    console.log(
-      "Sending customer email:",
-      this.customerEmail
-    );
-
-    const enteredValue =
-      this.customerEmail.trim();
-
-
     const whatsappPattern =
       /^[0-9]{10}$/;
 
+    const isEmail =
+      emailPattern.test(enteredValue);
 
-    if (whatsappPattern.test(enteredValue)) {
+    const isWhatsapp =
+      whatsappPattern.test(enteredValue);
 
+    /*
+     * Protect the selected channel.
+     * If AI requested Email, do not accept a phone number.
+     */
+    if (
+      this.requestedSharingChannel === 'email' &&
+      !isEmail
+    ) {
 
-      let whatsappNumber =
-        enteredValue;
-
-
-      console.log(
-        "Detected WhatsApp Number:",
-        whatsappNumber
-      );
-
-
-      const whatsappData = {
-
-        ownerId: this.ownerId,
-
-        customerNumber: whatsappNumber,
-
-        customerName: this.guestName,
-
-        message: this.lastCustomerMessage
-
-      };
-
-
-
-      axios.post(
-        'http://localhost:3000/api/ai/send-details-whatsapp',
-        whatsappData
-      )
-        .then(res => {
-
-
-          console.log(
-            "WHATSAPP SENT",
-            res.data
-          );
-
-
-          this.showEmailBox = false;
-
-          this.customerEmail = '';
-
-
-          const whatsappReply =
-            'சரி, உங்கள் WhatsApp எண்ணுக்கு கேட்ட விவரங்களை அனுப்பிவிட்டேன்.';
-
-
-
-          this.addBotMessage(
-            whatsappReply
-          );
-
-
-          this.speakReply(
-            whatsappReply,
-            () => {
-
-              this.autoStartListening();
-
-            },
-            false,
-            true
-          );
-
-
-        })
-        .catch(err => {
-
-
-          console.error(
-            "WHATSAPP ERROR",
-            err
-          );
-
-
-          alert(
-            "WhatsApp sending failed"
-          );
-
-
-        });
-
+      alert('Please enter a valid email address');
 
       return;
-
     }
 
+    /*
+     * If AI requested WhatsApp,
+     * do not accept an Email address.
+     */
+    if (
+      this.requestedSharingChannel === 'whatsapp' &&
+      !isWhatsapp
+    ) {
 
-    const data = {
+      alert(
+        'Please enter a valid 10-digit WhatsApp number'
+      );
 
-      email: this.customerEmail,
+      return;
+    }
 
-      ownerId: this.ownerId,
+    if (!isEmail && !isWhatsapp) {
 
-      customerName: this.guestName,
+      alert(
+        'Please enter a valid email address or 10-digit WhatsApp number'
+      );
 
-      request: this.lastCustomerMessage
+      return;
+    }
 
-    };
+    /*
+     * Final configuration protection
+     */
+    if (
+      isEmail &&
+      !this.emailSharingAvailable
+    ) {
 
+      this.showEmailBox = false;
+      this.customerEmail = '';
 
+      const unavailableReply =
+        'தற்போது Email-ல details அனுப்ப முடியாதுங்க.';
 
-    axios.post(
-      'http://localhost:3000/api/ai/send-details-email',
-      data
-    )
-      .then(res => {
+      this.addBotMessage(
+        unavailableReply
+      );
 
+      this.speakReply(
+        unavailableReply,
+        () => this.autoStartListening(),
+        false,
+        true
+      );
 
-        console.log(
-          "EMAIL SENT",
-          res.data
+      return;
+    }
+
+    if (
+      isWhatsapp &&
+      !this.whatsappSharingAvailable
+    ) {
+
+      this.showEmailBox = false;
+      this.customerEmail = '';
+
+      const unavailableReply =
+        'தற்போது WhatsApp-ல details அனுப்ப முடியாதுங்க.';
+
+      this.addBotMessage(
+        unavailableReply
+      );
+
+      this.speakReply(
+        unavailableReply,
+        () => this.autoStartListening(),
+        false,
+        true
+      );
+
+      return;
+    }
+
+    try {
+
+      let response: any;
+
+      /*
+       * EMAIL SENDING
+       */
+      if (isEmail) {
+
+        response = await axios.post(
+          'http://localhost:3000/api/ai/send-details-email',
+          {
+            email: enteredValue,
+
+            ownerId: this.ownerId,
+
+            guestId: this.guestId,
+
+            customerName: this.guestName,
+
+            request:
+              this.pendingFileRequest ||
+              this.lastCustomerMessage,
+
+            sendFiles:
+              this.pendingFileRequest.trim().length > 0,
+
+            matchedFileIds:
+              this.pendingMatchedFiles.map(
+                file => file.id
+              )
+          }
         );
+      }
 
+      /*
+       * WHATSAPP SENDING
+       */
+      if (isWhatsapp) {
 
-        this.emailSentSuccessfully = true;
-        const sentEmail = this.customerEmail;
+        response = await axios.post(
+          'http://localhost:3000/api/ai/send-details-whatsapp',
+          {
+            ownerId: this.ownerId,
+
+            customerNumber: enteredValue,
+
+            customerName: this.guestName,
+
+            message:
+              this.pendingFileRequest ||
+              this.lastCustomerMessage,
+
+            sendFiles:
+              this.pendingFileRequest.trim().length > 0,
+
+            matchedFileIds:
+              this.pendingMatchedFiles.map(
+                file => file.id
+              )
+          }
+        );
+      }
+
+      /*
+       * Backend may return HTTP 200 with success:false.
+       * Do not show a false success message.
+       */
+      if (!response?.data?.success) {
+
+        const backendCode =
+          response?.data?.code;
+
+        const errorReply =
+          backendCode === 'FILE_NOT_FOUND'
+
+            ? 'மன்னிக்கணும், நீங்க கேட்ட file தற்போது available-ஆ இல்லை.'
+
+            : isEmail
+
+              ? 'Email மூலம் details அனுப்ப முடியல. கொஞ்சம் நேரம் கழித்து முயற்சி பண்ணுங்க.'
+
+              : 'WhatsApp மூலம் details அனுப்ப முடியல. கொஞ்சம் நேரம் கழித்து முயற்சி பண்ணுங்க.';
+
         this.showEmailBox = false;
         this.customerEmail = '';
-        const emailReply =
-          'சரி, உங்க email address-க்கு கேட்ட details வெற்றிகரமாக அனுப்பிட்டேன்.';
-
 
         this.addBotMessage(
-          emailReply
+          errorReply
         );
 
-
         this.speakReply(
-          emailReply,
-          () => {
-
-            console.log(
-              "EMAIL SUCCESS VOICE FINISHED"
-            );
-
-            this.autoStartListening();
-
-          },
+          errorReply,
+          () => this.autoStartListening(),
           false,
           true
         );
 
-        // save email completion in conversation
-        axios.post(
+        return;
+      }
+
+      /*
+   * Successful sending
+   */
+      const sentDestination =
+        enteredValue;
+
+      /*
+       * Save this before clearing the pending file.
+       * It will be used in the conversation history.
+       */
+      const completedFileRequest =
+        this.pendingFileRequest.trim();
+
+      const filesWereSent =
+        completedFileRequest.length > 0;
+
+      this.showEmailBox = false;
+      this.customerEmail = '';
+
+      if (isEmail) {
+        this.emailSentSuccessfully = true;
+      }
+
+      /*
+       * Clear pending file only after successful sending.
+       */
+      this.pendingFileRequest = '';
+      this.pendingMatchedFiles = [];
+
+      const successReply = filesWereSent
+
+        ? isEmail
+
+          ? 'சரி, உங்க Email address-க்கு கேட்ட files அனுப்பிட்டேன்.'
+
+          : 'சரி, உங்க WhatsApp number-க்கு கேட்ட files அனுப்பிட்டேன்.'
+
+        : isEmail
+
+          ? 'சரி, உங்க Email address-க்கு கேட்ட details அனுப்பிட்டேன்.'
+
+          : 'சரி, உங்க WhatsApp number-க்கு கேட்ட details அனுப்பிட்டேன்.';
+
+      this.addBotMessage(
+        successReply
+      );
+
+      this.speakReply(
+        successReply,
+        () => this.autoStartListening(),
+        false,
+        true
+      );
+
+      /*
+       * Save the sending action in conversation history.
+       * Failure here must not affect actual sending.
+       */
+      try {
+
+        await axios.post(
           'http://localhost:3000/api/ai/guest/save-email-conversation',
           {
+            ownerId:
+              this.ownerId,
 
-            ownerId: this.ownerId,
+            guestId:
+              this.guestId,
 
-            guestId: this.guestId,
+            guestName:
+              this.guestName,
 
-            guestName: this.guestName,
+            email:
+              sentDestination,
 
-            email: sentEmail,
+            request:
+              completedFileRequest ||
+              this.lastCustomerMessage,
 
-            request: this.lastCustomerMessage,
-
-            reply: emailReply
-
+            reply:
+              successReply
           }
         );
 
-        // Save email conversation without calling AI
-
-        axios.post(
-          'http://localhost:3000/api/ai/guest/save-email-conversation',
-          {
-
-            ownerId: this.ownerId,
-
-            guestId: this.guestId,
-
-            guestName: this.guestName,
-
-            email: sentEmail,
-
-            reply: emailReply,
-
-            request: this.lastCustomerMessage
-
-          }
-        );
-
-      })
-      .catch(err => {
-
+      } catch (saveError) {
 
         console.error(
-          "EMAIL ERROR",
-          err
+          'Conversation save failed:',
+          saveError
         );
+      }
 
+    } catch (error: any) {
 
-        alert(
-          "Email sending failed"
-        );
+      console.error(
+        'DETAIL SHARING ERROR:',
+        error
+      );
 
+      const backendCode =
+        error?.response?.data?.code;
 
-      });
+      const errorReply =
+        backendCode === 'FILE_NOT_FOUND'
 
+          ? 'மன்னிக்கணும், நீங்க கேட்ட file தற்போது available-ஆ இல்லை.'
 
+          : isEmail
+
+            ? 'Email அனுப்பும்போது பிரச்சனை ஏற்பட்டது. கொஞ்சம் நேரம் கழித்து முயற்சி பண்ணுங்க.'
+
+            : 'WhatsApp அனுப்பும்போது பிரச்சனை ஏற்பட்டது. கொஞ்சம் நேரம் கழித்து முயற்சி பண்ணுங்க.';
+
+      this.showEmailBox = false;
+      this.customerEmail = '';
+
+      this.addBotMessage(
+        errorReply
+      );
+
+      this.speakReply(
+        errorReply,
+        () => this.autoStartListening(),
+        false,
+        true
+      );
+    }
   }
 
 }

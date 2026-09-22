@@ -15,7 +15,7 @@ import { RouterModule } from '@angular/router';   // ✅ ADD THIS
 
 export class LoginComponent {
   email: string = '';
-  password: string = ''; 
+  password: string = '';
 
   constructor(private router: Router) { }
 
@@ -32,12 +32,22 @@ export class LoginComponent {
         // ✅ Store user data (IMPORTANT)
         localStorage.setItem('user', JSON.stringify(response.data.user));
 
-        // ✅ Redirect
-        this.router.navigate(['/dashboard']);
+        const user = response.data.user;
+
+        if (user?.role === 'admin') {
+          this.router.navigateByUrl('/admin');
+        } else {
+          this.router.navigateByUrl('/dashboard');
+        }
       })
       .catch(error => {
         console.error('Login failed:', error);
-        alert('Login failed. Please try again.');
+
+        const message =
+          error.response?.data?.message ||
+          'Login failed. Please try again.';
+
+        alert(message);
       });
   }
 }
