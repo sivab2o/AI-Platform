@@ -6,28 +6,268 @@
 
       <div class="login-card">
 
-        <h2>Welcome Back 👋</h2>
-        <p class="subtitle">Login to continue</p>
+        <!-- LOGIN VIEW -->
+        <ng-container *ngIf="currentView === 'login'">
 
-        <form (ngSubmit)="onSubmit()">
+          <h2>Welcome Back 👋</h2>
 
-          <div class="input-group-custom">
-            <input type="email" [(ngModel)]="email" name="email" required />
-            <label>Email</label>
-          </div>
+          <p class="subtitle">
+            Login to continue
+          </p>
 
-          <div class="input-group-custom">
-            <input type="password" [(ngModel)]="password" name="password" required />
-            <label>Password</label>
-          </div>
+          <form (ngSubmit)="onSubmit()">
 
-          <button type="submit">Login</button>
-        </form>
+            <div class="input-group-custom">
 
-        <p class="bottom-text">
-          Don't have an account?
-          <span routerLink="/signup">Sign up</span>
-        </p>
+              <input
+                type="email"
+                [(ngModel)]="email"
+                name="loginEmail"
+                autocomplete="email"
+                required
+              />
+
+              <label>Email</label>
+
+            </div>
+
+            <div class="input-group-custom">
+
+              <input
+                type="password"
+                [(ngModel)]="password"
+                name="loginPassword"
+                autocomplete="current-password"
+                required
+              />
+
+              <label>Password</label>
+
+            </div>
+
+            <p
+              class="text-danger"
+              *ngIf="errorMessage"
+            >
+              {{ errorMessage }}
+            </p>
+
+            <p
+              class="text-success"
+              *ngIf="message"
+            >
+              {{ message }}
+            </p>
+
+            <button
+              type="submit"
+              [disabled]="isLoading"
+            >
+              {{ isLoading ? 'Please wait...' : 'Login' }}
+            </button>
+
+          </form>
+
+          <p class="bottom-text">
+
+            <span
+              role="button"
+              tabindex="0"
+              (click)="showForgotPassword()"
+              (keydown.enter)="showForgotPassword()"
+            >
+              Forgot Password?
+            </span>
+
+          </p>
+
+          <p class="bottom-text">
+
+            Don't have an account?
+
+            <span routerLink="/signup">
+              Sign up
+            </span>
+
+          </p>
+
+        </ng-container>
+
+
+        <!-- FORGOT-PASSWORD VIEW -->
+        <ng-container *ngIf="currentView === 'forgot'">
+
+          <h2>Forgot Password</h2>
+
+          <p class="subtitle">
+            Enter your registered email to receive a verification code.
+          </p>
+
+          <form (ngSubmit)="sendVerificationCode()">
+
+            <div class="input-group-custom">
+
+              <input
+                type="email"
+                [(ngModel)]="email"
+                name="forgotEmail"
+                autocomplete="email"
+                required
+              />
+
+              <label>Registered Email</label>
+
+            </div>
+
+            <p
+              class="text-danger"
+              *ngIf="errorMessage"
+            >
+              {{ errorMessage }}
+            </p>
+
+            <button
+              type="submit"
+              [disabled]="isLoading"
+            >
+              {{
+                isLoading
+                  ? 'Sending...'
+                  : 'Send Verification Code'
+              }}
+            </button>
+
+          </form>
+
+          <p class="bottom-text">
+
+            <span
+              role="button"
+              tabindex="0"
+              (click)="showLogin()"
+              (keydown.enter)="showLogin()"
+            >
+              Back to Login
+            </span>
+
+          </p>
+
+        </ng-container>
+
+
+        <!-- RESET-PASSWORD VIEW -->
+        <ng-container *ngIf="currentView === 'reset'">
+
+          <h2>Verify Your Email</h2>
+
+          <p class="subtitle">
+            Enter the 6-digit code sent to {{ email }}
+          </p>
+
+          <form (ngSubmit)="resetPassword()">
+
+            <div class="input-group-custom">
+
+              <input
+                type="text"
+                [(ngModel)]="otp"
+                name="otp"
+                inputmode="numeric"
+                maxlength="6"
+                autocomplete="one-time-code"
+                required
+              />
+
+              <label>Verification Code</label>
+
+            </div>
+
+            <div class="input-group-custom">
+
+              <input
+                type="password"
+                [(ngModel)]="newPassword"
+                name="newPassword"
+                autocomplete="new-password"
+                minlength="8"
+                required
+              />
+
+              <label>New Password</label>
+
+            </div>
+
+            <div class="input-group-custom">
+
+              <input
+                type="password"
+                [(ngModel)]="confirmPassword"
+                name="confirmPassword"
+                autocomplete="new-password"
+                minlength="8"
+                required
+              />
+
+              <label>Confirm Password</label>
+
+            </div>
+
+            <p
+              class="text-danger"
+              *ngIf="errorMessage"
+            >
+              {{ errorMessage }}
+            </p>
+
+            <p
+              class="text-success"
+              *ngIf="message"
+            >
+              {{ message }}
+            </p>
+
+            <button
+              type="submit"
+              [disabled]="isLoading"
+            >
+              {{
+                isLoading
+                  ? 'Updating...'
+                  : 'Reset Password'
+              }}
+            </button>
+
+          </form>
+
+          <p class="bottom-text">
+
+            Didn't receive the code?
+
+            <span
+              role="button"
+              tabindex="0"
+              (click)="resendVerificationCode()"
+              (keydown.enter)="resendVerificationCode()"
+            >
+              Resend Code
+            </span>
+
+          </p>
+
+          <p class="bottom-text">
+
+            <span
+              role="button"
+              tabindex="0"
+              (click)="showLogin()"
+              (keydown.enter)="showLogin()"
+            >
+              Back to Login
+            </span>
+
+          </p>
+
+        </ng-container>
 
       </div>
 

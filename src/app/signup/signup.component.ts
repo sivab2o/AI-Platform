@@ -125,7 +125,7 @@ export class SignupComponent {
   }
 
   private readonly apiUrl =
-    'http://localhost:3000/api/auth';
+    'https://aiemployeeplatform.leadsfactory.info/api/auth';
 
   constructor(private router: Router) { }
 
