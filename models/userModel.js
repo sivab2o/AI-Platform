@@ -128,9 +128,51 @@ const User = {
             );
           }
         );
-      }
-    );
-  }
+        });
+},
+
+saveResetOtp: (email, otpHash, expiresAt, callback) => {
+  const sql = `
+    UPDATE users
+    SET reset_otp_hash = ?,
+        reset_otp_expires_at = ?
+    WHERE email = ?
+  `;
+
+  db.query(sql, [otpHash, expiresAt, email], callback);
+},
+
+findValidResetOtp: (email, callback) => {
+  const sql = `
+    SELECT id, email, reset_otp_hash, reset_otp_expires_at
+    FROM users
+    WHERE email = ?
+      AND reset_otp_hash IS NOT NULL
+      AND reset_otp_expires_at > NOW()
+    LIMIT 1
+  `;
+
+  db.query(sql, [email], callback);
+},
+
+updatePassword: (email, newPassword, callback) => {
+  bcrypt.hash(newPassword, 10, (err, hashedPassword) => {
+    if (err) {
+      return callback(err);
+    }
+
+    const sql = `
+      UPDATE users
+      SET password = ?,
+          reset_otp_hash = NULL,
+          reset_otp_expires_at = NULL
+      WHERE email = ?
+    `;
+
+    db.query(sql, [hashedPassword, email], callback);
+  });
+}
+
 };
 
 module.exports = User;

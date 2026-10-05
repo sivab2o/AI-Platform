@@ -6,7 +6,6 @@ const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const path = require('path');
 const nodemailer = require('nodemailer');
-const trainingCache = new Map();
 
 const stripHtml = (html) => {
     if (!html) return '';
@@ -941,7 +940,7 @@ const detectSharingIntentWithAI = async ({
         const response =
             await openai.chat.completions.create({
 
-                model: 'gpt-4o-mini',
+                model: 'gpt-4.1-2025-04-14',
                 temperature: 0,
                 max_tokens: 100,
 
@@ -1690,7 +1689,7 @@ const chatWithAI = (req, res) => {
             const OpenAI = require('openai');
             const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
             const aiResponse = await openai.chat.completions.create({
-                model: 'gpt-4o-mini',
+                model: 'gpt-4.1-2025-04-14',
                 messages: [
                     { role: 'system', content: combinedData },
                     { role: 'user', content: message }
@@ -1748,13 +1747,11 @@ const guestChat = async (req, res) => {
 
     const loadTrainingData = async () => {
 
-        if (trainingCache.has(ownerId)) {
-
-            return trainingCache.get(ownerId);
-
-        }
-
-
+        /*
+         * Always load the latest training data from the database.
+         * This prevents old business and product information
+         * remaining in the server cache.
+         */
         const data = await new Promise((resolve, reject) => {
 
             AIModel.getTrainingData(ownerId, (err, results) => {
@@ -1770,14 +1767,9 @@ const guestChat = async (req, res) => {
 
         });
 
-
-        trainingCache.set(ownerId, data);
-
-
         return data;
 
     };
-
 
 
     let results;
@@ -2043,92 +2035,109 @@ const guestChat = async (req, res) => {
         selectedLangName = langName.toLowerCase();
         if (langName.toLowerCase() === 'tamil') {
             langInstruction = `
-Reply using natural spoken Tamil sentence structure,
-the way people normally speak in Chennai.
+Reply in natural, respectful spoken Tamil.
 
-Keep product names, company names, platform names,
-service names, marketing words and technical terminology
-in English letters.
+Understand the meaning of the customer's complete message before
+writing the response.
 
-Never transliterate English terminology into Tamil script.
+The customer message may come from voice transcription and may contain
+misspelled words, incomplete words, phonetic spellings or mixed-language
+expressions.
 
-Write:
-"Meta Ads", not "மெட்டா ஆட்ஸ்"
-"Insurance Business", not "இன்சூரன்ஸ் பிஸ்னஸ்"
-"Leads", not "லீட்ஸ்"
-"Target Audience", not "டார்கெட் ஆடியன்ஸ்"
+Do not copy transcription mistakes into the reply.
 
-Correct style:
-"Meta Ads மூலமாக உங்க Insurance Business-க்கு
-சரியான Target Audience-ஐ reach பண்ணி
-quality Leads generate பண்ணலாம்."
+Infer the intended meaning from the current message, recent conversation
+and this user's business training data.
 
-Use short and natural spoken sentences.
+Preserve the customer's exact requirement, age, amount, date, location,
+product choice and service choice.
+
+Never change the customer's requirement into a different product,
+service, category or meaning.
+
+Use natural Tamil sentence structure rather than translating English
+grammar word by word.
+
+Keep company names, product names, service names, brand names and
+professional terminology in the form used in this user's business
+training data.
+
+When a term is not present in the training data, choose the natural form
+that a Tamil-speaking business representative would use.
+
+Use short, complete and grammatically correct sentences.
+
+Before returning the response, silently check whether a real Tamil
+business representative would naturally say the sentence aloud.
+If not, rewrite it naturally before responding.
 `;
         } else {
             langInstruction = `Reply ONLY in ${langName} script and grammar. Keep common English business words in English. NEVER reply in any other language.`;
         }
     }
 
-    // ✅ Tamil style block — ONLY when Tamil selected
+    // Dynamic Tamil style — works for every user and business
     let tamilStyleRule = '';
-    if (selectedLangName === 'tamil' || replyLang === 'tanglish') {
-        tamilStyleRule = '\n\nTAMIL STYLE RULE: When replying in Tamil, use SPOKEN Tamil (பேச்சு வழக்கு) — the way people actually talk in shops and on phone calls. NEVER use formal written Tamil (செந்தமிழ்).'
-            + '\nUse spoken forms:'
-            + '\n- "இருக்கு" not "இருக்கிறது" or "உள்ளது"'
-            + '\n- "நாங்க" not "நாங்கள்", "நீங்க" not "நீங்கள்"'
-            + '\n- "எங்ககிட்ட" not "எங்களிடம்"'
-            + '\n- "பண்ணலாம்" not "செய்யலாம்", "பண்றோம்" not "செய்கிறோம்"'
-            + '\n- "எப்போ" not "எப்போது"'
-            + '\n- "வரீங்க" / "வருவீங்க" not "வருகிறீர்கள்"'
-            + '\n- "சொல்லுங்க" not "கூறுங்கள்"'
-            + '\n- "வேணும்" not "வேண்டும்"'
-            + '\nCRITICAL GRAMMAR: The sentence must sound like a real person talking. NEVER combine two verbs awkwardly. NEVER invent words that do not exist in Tamil.'
-            + '\nVERB ENDINGS — use the correct form:'
-            + '\n- Telling customer to do something (polite command): "-ங்க" → "call பண்ணுங்க", "வாங்க", "சொல்லுங்க", "பாருங்க"'
-            + '\n- Asking what customer is doing (question): "-றீங்களா?" → "வர்றீங்களா?", "வேணுமா?"'
-            + '\n- NEVER use statement form "-றீங்க" when suggesting an action. Wrong: "call பண்ணுறீங்க" — Right: "call பண்ணுங்க"'
-            + '\n- Use real particles only: "எதுவும்" not "ஏனும்". If unsure of a particle, drop it and keep the sentence simple.'
-            + '\nWrong: "எப்போது வாங்க வரிகிறீங்க?" — Right: "எப்போ வரீங்க?"'
-            + '\nWrong: "நீங்கள் வருகை தரலாம்" — Right: "நீங்க வந்து பாருங்க"'
-            + '\nWrong: "உதவிக்குப் பொருத்தமானது பன்னி டேப்" — this is meaningless gibberish. If you cannot form a natural Tamil sentence, use a SIMPLE one instead: "எது வேணும்னு சொல்லுங்க."'
-            + '\nWrong: "உதவிக்கரத்தேன்" — this word does not exist. Right: "உதவறேன்" or "help பண்றேன்"'
-            + '\nWrong: "quality-க்கு கம்பளி" — கம்பளி means blanket! For assurance say: "quality guarantee-ங்க" or "கவலையே வேண்டாம், BIS Hallmark இருக்கு."'
-            + '\nWrong: "jewelry இருக்காங்க" — "இருக்காங்க" is only for people. For products/things use "இருக்குங்க": "jewelry இருக்குங்க"'
-            + '\nFor shop timing say "எங்க store/கடை open-ஆ இருக்கும்" not "நாங்க open-ஆ இருக்கோம்".'
-            + '\nWrong: "உங்களுக்கு எப்போது வரணும்?" — Right: "எப்போ வரீங்க?"'
-            + '\nWhen customer says Thank you / Thanks / நன்றி: reply simply "நன்றிங்க!" — do NOT ask when they are coming.'
-            + '\nNEVER sound pushy or demanding. Wrong: "கடைக்கு வாங்க வரணுமா, இல்லையா?" — Right: "Store-க்கு வந்து பாருங்க!"'
-            + '\nWhen listing services or products, use ONLY the actual services from the training data above. Format: "நாங்க [service 1], [service 2], [service 3] பண்றோம். உங்களுக்கு எது வேணும்?" — NEVER add services that are not in the training data.'
-            + '\nBefore replying, ask yourself: would a shop person in Chennai actually say this sentence out loud? If not, rewrite it simpler.'
-            + '\nKeep questions SHORT: "எப்போ வரீங்க?", "என்ன வேணும்?", "photos அனுப்பட்டுமா?"'
-            + '\nExample reply style: "ஆமா சார், எங்ககிட்ட [product] இருக்குங்க. இன்னைக்கு Price [rate]. Store-க்கு எப்போ வரீங்க?" — fill with actual details from training data.'
-            + '\nAPPOINTMENT RULE: When fixing an appointment, ALWAYS end with a clear confirmation: "சரிங்க, [day] [time]-க்கு appointment fix பண்ணிட்டேன்!" If the requested time is outside working hours, suggest the nearest valid time and ASK: "நாங்க [open time]-க்குதான் திறப்போம்ங்க. [suggested time]-க்கு fix பண்ணட்டுமா?" NEVER leave an appointment request unresolved.'
-            + '\nTone: warm, friendly, like a helpful shop person — not like a news reader or textbook.'
-            + '\nVOICE TRANSCRIPTION NOTE: The customer is speaking by VOICE, and English words often get written phonetically in Tamil script by the transcriber. ALWAYS try to recognize these as English words before saying you did not understand:'
-            + '\n- "பிராடக்ஸ்" / "பராடக்ஸ்" / "ப்ராடக்ட்ஸ்" = Products'
-            + '\n- "ப்ரைஸ்" / "பிரைஸ்" = Price, "ரேட்" = Rate'
-            + '\n- "ஆஃபர்" / "ஆபர்" = Offer, "டிஸ்கவுண்ட்" = Discount'
-            + '\n- "டெலிவரி" = Delivery, "புக்கிங்" = Booking, "அப்பாய்ண்ட்மென்ட்" = Appointment'
-            + '\n- "டைமிங்" = Timing, "சர்வீஸ்" / "சர்வீசஸ்" = Service(s)'
-            + '\n- "கோல்ட்" = Gold, "சில்வர்" = Silver'
-            + '\nGeneral rule: if a Tamil-script word looks strange, sound it out — it is probably an English business word. Answer the question instead of asking to repeat. Only say "புரியல" if the message truly makes no sense even after this.'
-            + '\nMOST COMMON MISTAKE — NEVER DO THIS: "இருக்காங்க" is ONLY for PEOPLE ("அவங்க இருக்காங்க"). For products, collections, jewelry, services, things — ALWAYS use "இருக்கு" or polite "இருக்குங்க".'
-            + '\nWrong: "bridal collections இருக்காங்க" — Right: "bridal collections இருக்குங்க"'
-            + '\nWrong: "Gold ornaments இருக்காங்க" — Right: "Gold ornaments இருக்குங்க"'
-            + '\nWrong: "designs இருக்காங்க" — Right: "designs இருக்கு"'
-            + '\nCheck EVERY sentence before replying: did you write "இருக்காங்க" about a thing? Change it to "இருக்குங்க".'
-            + '\nRESPECTFUL SPOKEN TAMIL RULE: Spoken Tamil must still be respectful and professional.'
-            + '\n- Never address the customer as "மா", "டா", "டி", "பாய்", "bhai", "bro", "நண்பா" or "தம்பி".'
-            + '\n- Use "சார்" or "மேடம்" only when appropriate. Otherwise avoid unnecessary forms of address.'
-            + '\n- Use "நீங்க", "உங்க", "சொல்லுங்க", "கொடுங்க" and other respectful spoken forms.'
-            + '\n- When referring to a staff member, say "அவர்" and "அவர்கள்". Never say "அவன்" or "அவள்".'
-            + '\n- Correct: "David அவர்கள் உங்களைத் தொடர்புகொள்வார்."'
-            + '\n- Wrong: "David அவன் உங்க contact பண்ணும்."'
-            + '\n- Pronounce English service names clearly: Google Ads, Meta Ads, WhatsApp, Website Development.'
-            + '\n- Never mix company grammar unnaturally, such as "David நாங்க-இன் responsible person".'
-            + '\n- Say naturally: "David அவர்கள் எங்கள் பொறுப்பாளர்."'
-            + '\nENDING RULE: Do not end a normal sales reply with a generic question asking whether the customer needs anything else. During an active sales conversation, ask only one specific question that moves the current requirement to the next relevant stage. When the customer says thanks, enough, done, no, close or goodbye, immediately stop the sales flow, give one short respectful closing in the selected language and ask no further question.';
+
+    if (
+        selectedLangName === 'tamil' ||
+        replyLang === 'tanglish'
+    ) {
+        tamilStyleRule = `
+
+### DYNAMIC SPOKEN TAMIL QUALITY RULE ###
+
+Use natural, respectful spoken Tamil suitable for a real business
+conversation.
+
+First understand the customer's intended meaning. Do not mechanically
+repeat the customer's wording.
+
+Voice transcription may produce spelling mistakes, phonetic words,
+incorrect spacing, incorrect endings or mixed-language text. Correct
+these naturally based on context without changing the meaning.
+
+Use this user's BUSINESS DATA, MASTER DATA and conversation history to
+understand industry terminology dynamically.
+
+Do not use terminology, services, products, prices or examples belonging
+to another business.
+
+Do not invent a product or service that is not supported by the current
+business information.
+
+Keep the response grammatically natural. Subjects, objects, pronouns,
+verb endings, singular forms, plural forms and respectful forms must
+agree correctly.
+
+Refer to people respectfully. Refer to products, services and objects
+using grammatically appropriate non-person forms.
+
+Preserve every factual detail supplied by the customer, including age,
+amount, quantity, date, time, location and selected requirement.
+
+Answer the customer's actual question first.
+
+After answering, ask no more than one specific and relevant next
+question if important information is still missing.
+
+Never ask a generic question merely to continue the conversation.
+
+Never repeat a question that was already answered.
+
+Keep the reply short, complete and easy to speak aloud.
+
+Before returning the response, silently perform this quality check:
+
+1. Did I preserve the customer's actual meaning?
+2. Did I use only the current business information?
+3. Did I accidentally copy a transcription mistake?
+4. Is the Tamil grammatically natural and respectful?
+5. Does the sentence sound natural when spoken aloud?
+6. Did I ask only one useful next question?
+
+If any check fails, correct the response before returning it.
+`;
     }
 
     // ✅ Generic spoken-style rule for other languages (Telugu, Hindi, Malayalam, Kannada)
@@ -2415,22 +2424,28 @@ Use short and natural spoken sentences.
                     message +
                     `
 
-[Reply using natural SPOKEN Tamil sentence structure.
+[Understand the intended meaning of this customer message.
 
-IMPORTANT:
-- Keep all product names, company names, platform names, service names and business terminology in English letters.
-- Never transliterate English terminology into Tamil script.
-- Write "Meta Ads", not "மெட்டா ஆட்ஸ்".
-- Write "Insurance Business", not "இன்சூரன்ஸ் பிஸ்னஸ்".
-- Write "Leads", not "லீட்ஸ்".
-- Write "Facebook" and "Instagram" in English.
-- Copy business and product names exactly from the training data.
-- Use short, natural sentences.
-- Use "நாங்க" instead of "நாங்கள்".
-- Use "உங்க" instead of "உங்கள்" where natural.
-- Use "பண்ணலாம்" instead of "செய்யலாம்".
-- Use "-ல" instead of formal "-இல்".
-- Do not copy previous replies word-for-word.]`;
+The message may contain voice-transcription errors, phonetic spellings,
+mixed languages or incomplete words.
+
+Do not copy those errors into the response.
+
+Interpret terminology dynamically using this user's business training
+data and recent conversation.
+
+Preserve the customer's exact meaning and all supplied facts.
+
+Reply in short, respectful and grammatically natural spoken Tamil.
+
+Use the current business terminology naturally without introducing
+terminology from another business.
+
+Answer first and ask only one specific next question when necessary.
+
+Before returning the reply, silently verify that it sounds natural when
+spoken aloud.]`;
+
 
             } else {
                 finalUserMessage =
@@ -2667,14 +2682,13 @@ WhatsApp availability: ${sharingAvailability.whatsappAvailable ? 'AVAILABLE' : '
             + '\nVoice output: short natural sentences, no bullet points, no markdown, no numbered lists.'
 
 
-            + '\n\n### ENGLISH WORD PRESERVATION RULE — CRITICAL ###\n'
-            + 'For Indian-language replies, use the selected Indian language for normal sentence structure, but write business and technical terminology using English letters.\n'
-            + 'NEVER transliterate English product names, company names, platform names, service names, application names or marketing terminology into Tamil or another Indian script.\n'
-            + 'Copy company names and product names exactly as they appear in the business training information.\n'
-            + 'Always keep these kinds of words in English: Meta Ads, Google Ads, Facebook, Instagram, WhatsApp, Website, Digital Marketing, Insurance, Business, Leads, Sales, Customer, Campaign, Target Audience, CRM, Email, Mobile App, SEO, Premium, Policy, Plan, Budget and Payment.\n'
-            + 'Correct example: "Meta Ads மூலமாக உங்கள் Insurance Business-க்கு சரியான Target Audience-ஐ reach பண்ணி Leads generate பண்ணலாம்."\n'
-            + 'Wrong example: "மெட்டா ஆட்ஸ் மூலமாக இன்சூரன்ஸ் பிஸ்னஸுக்கு லீட்ஸ் உருவாக்கலாம்."\n'
-            + 'The English words must remain in English letters in every reply.'
+            + '\n\n### DYNAMIC TERMINOLOGY RULE ###\n'
+            + 'Use terminology dynamically from the current user business training data and conversation context.\n'
+            + 'Preserve company names, brand names, product names and service names exactly as stored in the current business information.\n'
+            + 'Do not introduce terminology from another user, industry or business.\n'
+            + 'When voice transcription writes a professional term phonetically, understand the intended term from context instead of copying the transcription error.\n'
+            + 'Use the natural written form of each term while preserving the customer meaning.\n'
+            + 'Do not maintain a fixed vocabulary list because each user and business can be different.\n'
 
 
             + '\n\n### NATURAL SPOKEN TAMIL RULE ###\n'
@@ -2806,6 +2820,18 @@ WhatsApp availability: ${sharingAvailability.whatsappAvailable ? 'AVAILABLE' : '
             + 'Avoid unnecessary long explanations.\n'
             + 'For voice replies, keep sentences short and easy to understand.\n'
 
+
+            + '\n\n### PRICE AND PACKAGE AMOUNT RULE — MANDATORY ###\n'
+            + 'Whenever mentioning any price, package amount, rate, quotation, premium, charge, cost or estimated investment, clearly tell the customer that it is an approximate amount.\n'
+            + 'Always explain briefly that the final amount may vary based on the customer requirement, selected services, quantity, location, customization and other relevant details.\n'
+            + 'Never present an approximate price as a fixed or finally confirmed price.\n'
+            + 'Never confirm that every requested service can definitely be provided within the customer budget unless that exact package and price are available in the business training data.\n'
+            + 'If the customer gives a budget, acknowledge the budget but do not promise the complete service within that budget.\n'
+            + 'Say that suitable options can be checked based on their requirement.\n'
+            + 'Express the approximate-price clarification naturally in the selected customer language.\n'
+            + 'Tamil example: "இது approximate price-ங்க. உங்க requirement மற்றும் selected services-ஐ பொறுத்து final amount மாறலாம்."\n'
+            + 'English example: "This is an approximate price. The final amount may vary based on your requirements and selected services."\n'
+
             // + '\n\n### EMAIL INFORMATION REQUEST RULE ###\n'
             // + 'If customer asks to send, share, mail, email, forward, or provide details:\n'
             // + '- First ask customer to enter their email address in the email input box shown below.\n'
@@ -2859,9 +2885,9 @@ WhatsApp availability: ${sharingAvailability.whatsappAvailable ? 'AVAILABLE' : '
         let aiResponse;
         try {
             aiResponse = await openai.chat.completions.create({
-                model: 'gpt-4o-mini',
-                temperature: 0.3,
-                max_tokens: 120,
+                model: 'gpt-4.1-2025-04-14',
+                temperature: 0.2,
+                max_tokens: 240,
                 messages: [
                     { role: 'system', content: systemPrompt },
                     ...conversationHistory,
@@ -2873,9 +2899,9 @@ WhatsApp availability: ${sharingAvailability.whatsappAvailable ? 'AVAILABLE' : '
             console.log('[Retry] OpenAI failed once, retrying:', retryErr.message);
             await new Promise(r => setTimeout(r, 1000));
             aiResponse = await openai.chat.completions.create({
-                model: 'gpt-4o-mini',
-                temperature: 0.4,
-                max_tokens: 150,
+                model: 'gpt-4.1-2025-04-14',
+                temperature: 0.2,
+                max_tokens: 240,
                 messages: [
                     { role: 'system', content: systemPrompt },
                     ...conversationHistory,
@@ -3526,7 +3552,7 @@ async function generateClientSummary(openai, guestId, conversationHistory, lates
         const transcript = transcriptParts.slice(-12).join('\n');
 
         const summaryResponse = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
+            model: 'gpt-4.1-2025-04-14',
             messages: [
                 {
                     role: 'system',
@@ -3744,7 +3770,7 @@ const getAISuggestions = (req, res) => {
             const OpenAI = require('openai');
             const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
             const aiResponse = await openai.chat.completions.create({
-                model: 'gpt-4o-mini',
+                model: 'gpt-4.1-2025-04-14',
                 messages: [
                     {
                         role: 'system',
@@ -3907,7 +3933,20 @@ const guestWelcome = async (req, res) => {
         const addrStyle = addrMatch ? addrMatch[1].trim().toLowerCase() : '';
         const useName = !addrStyle.includes('friend');
 
-        let rawMessage = returning ? introScript : introScript;
+        let rawMessage =
+            returning
+                ? introScript
+                : introScript;
+
+        /*
+         * After the configured introduction, clearly identify
+         * that this is the company's AI Assistant.
+         */
+        const aiAssistantIdentity =
+            ` I am the AI Assistant from ${businessName}.`;
+
+        rawMessage =
+            `${rawMessage}${aiAssistantIdentity}`;
 
         // ✅ Extract products from training data for the introduction
         const productMatches = basicData.match(/Product or Service \d+:\s*(.+)/gi) || [];
@@ -4474,13 +4513,20 @@ const textToSpeech = async (req, res) => {
             apiKey: process.env.OPENAI_API_KEY
         });
 
-        // Remove Markdown symbols
+        /*
+ * Clean display formatting without destroying
+ * natural sentence boundaries.
+ */
         const cleanText = String(text)
+            .normalize('NFC')
             .replace(/\*\*(.*?)\*\*/g, '$1')
             .replace(/\*(.*?)\*/g, '$1')
             .replace(/#{1,6}\s?/g, '')
-            .replace(/•\s?/g, ', ')
-            .replace(/\n+/g, ', ')
+            .replace(/[•✅☑️▪️◾]\s*/gu, '. ')
+            .replace(/\r?\n+/g, '. ')
+            .replace(/\.{2,}/g, '.')
+            .replace(/\s+([,.?!])/g, '$1')
+            .replace(/([,.?!])(?=\S)/g, '$1 ')
             .replace(/\s{2,}/g, ' ')
             .trim();
 
@@ -4528,94 +4574,127 @@ const textToSpeech = async (req, res) => {
                 return ` ${spokenNumber} `;
             }
         );
-        const selectedLanguage =
-            String(language || 'english').toLowerCase();
+        /*
+ * Normalize every supported frontend language value.
+ * This prevents Tamil from accidentally using English
+ * pronunciation instructions.
+ */
+        const rawLanguage =
+            String(language || 'english')
+                .trim()
+                .toLowerCase();
 
+        const languageAliases = {
+            tamil: 'tamil',
+            ta: 'tamil',
+            'ta-in': 'tamil',
+            'name:tamil': 'tamil',
+
+            english: 'english',
+            en: 'english',
+            'en-in': 'english',
+            'en-us': 'english',
+            'en-gb': 'english',
+            'name:english': 'english',
+
+            hindi: 'hindi',
+            hi: 'hindi',
+            'hi-in': 'hindi',
+            'name:hindi': 'hindi',
+
+            telugu: 'telugu',
+            te: 'telugu',
+            'te-in': 'telugu',
+            'name:telugu': 'telugu',
+
+            malayalam: 'malayalam',
+            ml: 'malayalam',
+            'ml-in': 'malayalam',
+            'name:malayalam': 'malayalam',
+
+            kannada: 'kannada',
+            kn: 'kannada',
+            'kn-in': 'kannada',
+            'name:kannada': 'kannada'
+        };
+
+        const selectedLanguage =
+            languageAliases[rawLanguage] || 'english';
+
+        /*
+ * Keep TTS instructions short and positive.
+ * Excessive and conflicting pronunciation instructions
+ * can make multilingual speech sound unnatural.
+ */
         const commonVoiceStyle = `
-Speak like a real human during a friendly phone conversation.
-Speak smoothly, clearly and confidently at a natural speed.
-Use natural emotion and conversational intonation.
-Use short, natural pauses between phrases.
-Do not sound robotic, formal or like a newsreader.
-Pronounce every word clearly without exaggerating it.
-Maintain one consistent speaker identity, voice, pitch and volume
-throughout the complete audio.
-Ask questions with natural rising intonation.
+Use one consistent human speaker throughout the complete audio.
+Speak warmly, clearly and conversationally at a natural pace.
+Use natural phrasing, sentence rhythm and question intonation.
+Pause naturally at commas and sentence endings.
 `;
 
         const languageInstructions = {
+
             tamil: `
 ${commonVoiceStyle}
 
-Speak in natural conversational Tamil with a clear Indian Tamil accent.
+Speak in natural everyday Tamil with a fluent Tamil Nadu accent.
 
-The input may contain Tamil-script words and English-letter words
-inside the same sentence.
+Use relaxed spoken Tamil pronunciation suitable for a friendly
+business phone conversation.
 
-Pronounce Tamil-script portions naturally in spoken Tamil.
+Tamil-script words must sound naturally Tamil.
 
-Pronounce words written using English letters in clear Indian English.
+Words written in English letters must be pronounced naturally in
+Indian English while keeping the same speaker voice.
 
-Switch naturally between Tamil and English without changing the
-speaker, voice, pitch or volume.
+Move smoothly between Tamil and English without changing the speaker,
+pitch, volume, emotion or pace.
 
-Product names, service names, company names, transport names,
-platform names and technical terminology written in English must be
-pronounced in English.
+English digit words inside phone numbers must be spoken individually,
+clearly and smoothly in the same voice.
 
-Phone numbers have already been converted into English digit words.
-
-Pronounce every English digit word clearly in English.
-
-Maintain exactly the same speaker identity, voice, pitch, volume,
-emotion and speaking speed throughout the entire response.
-
-Do not introduce a second voice while reading English words or numbers.
-
-Do not repeat, combine or skip any digit word.
-
-Read consecutive English digit words smoothly with only a very short
-pause between them.
-
-Pause slightly before and after the complete phone number.
-
-Do not translate, rewrite or transliterate the supplied text.
-Preserve the original meaning and order.
+Preserve the supplied text, word order, meaning and punctuation.
 `,
 
             english: `
-        ${commonVoiceStyle}
-        Speak in clear conversational Indian English.
-        Read numbers clearly.
-    `,
+${commonVoiceStyle}
+
+Speak in clear conversational Indian English.
+Pronounce numbers clearly.
+`,
 
             hindi: `
-        ${commonVoiceStyle}
-        Speak in natural conversational Hindi.
-        Pronounce English words mixed with Hindi naturally.
-        Read numbers clearly.
-    `,
+${commonVoiceStyle}
+
+Speak in natural conversational Hindi.
+Pronounce English terminology naturally in Indian English while
+maintaining the same speaker voice.
+`,
 
             telugu: `
-        ${commonVoiceStyle}
-        Speak in natural conversational Telugu.
-        Pronounce English words mixed with Telugu naturally.
-        Read numbers clearly.
-    `,
+${commonVoiceStyle}
+
+Speak in natural conversational Telugu.
+Pronounce English terminology naturally in Indian English while
+maintaining the same speaker voice.
+`,
 
             malayalam: `
-        ${commonVoiceStyle}
-        Speak in natural conversational Malayalam.
-        Pronounce English words mixed with Malayalam naturally.
-        Read numbers clearly.
-    `,
+${commonVoiceStyle}
+
+Speak in natural conversational Malayalam.
+Pronounce English terminology naturally in Indian English while
+maintaining the same speaker voice.
+`,
 
             kannada: `
-        ${commonVoiceStyle}
-        Speak in natural conversational Kannada.
-        Pronounce English words mixed with Kannada naturally.
-        Read numbers clearly.
-    `
+${commonVoiceStyle}
+
+Speak in natural conversational Kannada.
+Pronounce English terminology naturally in Indian English while
+maintaining the same speaker voice.
+`
         };
 
         const instructions =

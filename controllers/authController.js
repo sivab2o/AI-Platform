@@ -4,10 +4,11 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const generateToken = require('../utils/generateToken');
 const PaymentModel = require('../models/paymentModel');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 // const { log } = require('node:console');
 
 const Razorpay = require('razorpay');
-const crypto = require('crypto');
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -458,9 +459,256 @@ const login = (req, res) => {
   });
 };
 
+const forgotPassword = (req, res) => {
+  const email = String(req.body.email || '')
+    .trim()
+    .toLowerCase();
+
+  if (!email) {
+    return res.status(400).json({
+      message: 'Email is required'
+    });
+  }
+
+  User.findByEmail(email, async (err, results) => {
+    if (err) {
+      return res.status(500).json({
+        message: 'Unable to process password reset'
+      });
+    }
+
+    /*
+     * Return the same response even when the email does not exist.
+     * This prevents exposing registered email addresses.
+     */
+    if (results.length === 0) {
+      return res.status(200).json({
+        message:
+          'If this email is registered, a verification code has been sent.'
+      });
+    }
+
+    try {
+      const otp = crypto.randomInt(100000, 1000000).toString();
+
+      const otpHash = crypto
+        .createHash('sha256')
+        .update(otp)
+        .digest('hex');
+
+      const expiresAt =
+        new Date(Date.now() + 10 * 60 * 1000);
+
+      User.saveResetOtp(
+        email,
+        otpHash,
+        expiresAt,
+        async saveError => {
+          if (saveError) {
+            console.error(
+              'Save reset OTP error:',
+              saveError
+            );
+
+            return res.status(500).json({
+              message:
+                'Unable to create verification code'
+            });
+          }
+
+          try {
+                       const transporter =
+              nodemailer.createTransport({
+                service: 'gmail',
+
+                auth: {
+                  user: process.env.SMTP_EMAIL,
+                  pass: process.env.SMTP_APP_PASSWORD
+                },
+
+                /*
+                 * Allow a self-signed certificate only during
+                 * local development.
+                 *
+                 * Production continues to require a valid
+                 * trusted certificate.
+                 */
+                tls: {
+                  rejectUnauthorized:
+                    process.env.NODE_ENV === 'production'
+                }
+              });
+
+            await transporter.sendMail({
+              from:
+                `"Leads Factory Technologies" <${process.env.SMTP_EMAIL}>`,
+              to: email,
+              subject: 'Password Reset Verification Code',
+              html: `
+                <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto">
+                  <h2>Password Reset Verification</h2>
+
+                  <p>
+                    Use the following verification code to reset your password:
+                  </p>
+
+                  <div style="font-size:32px;font-weight:bold;letter-spacing:8px;margin:24px 0">
+                    ${otp}
+                  </div>
+
+                  <p>
+                    This verification code is valid for 10 minutes.
+                  </p>
+
+                  <p>
+                    If you did not request a password reset, ignore this email.
+                  </p>
+                </div>
+              `
+            });
+
+            return res.status(200).json({
+              message:
+                'If this email is registered, a verification code has been sent.'
+            });
+
+          } catch (emailError) {
+            console.error(
+              'Reset OTP email error:',
+              emailError.message
+            );
+
+            return res.status(500).json({
+              message:
+                'Verification email could not be sent'
+            });
+          }
+        }
+      );
+
+    } catch (otpError) {
+      console.error(
+        'OTP generation error:',
+        otpError
+      );
+
+      return res.status(500).json({
+        message:
+          'Unable to generate verification code'
+      });
+    }
+  });
+};
+
+
+const resetPassword = (req, res) => {
+  const email = String(req.body.email || '')
+    .trim()
+    .toLowerCase();
+
+  const otp = String(req.body.otp || '').trim();
+
+  const newPassword =
+    String(req.body.newPassword || '');
+
+  if (!email || !otp || !newPassword) {
+    return res.status(400).json({
+      message:
+        'Email, verification code and new password are required'
+    });
+  }
+
+  if (!/^\d{6}$/.test(otp)) {
+    return res.status(400).json({
+      message:
+        'Enter a valid 6-digit verification code'
+    });
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({
+      message:
+        'Password must contain at least 8 characters'
+    });
+  }
+
+  User.findValidResetOtp(
+    email,
+    (findError, results) => {
+      if (findError) {
+        return res.status(500).json({
+          message:
+            'Unable to verify the code'
+        });
+      }
+
+      if (results.length === 0) {
+        return res.status(400).json({
+          message:
+            'Verification code is invalid or expired'
+        });
+      }
+
+      const submittedOtpHash = crypto
+        .createHash('sha256')
+        .update(otp)
+        .digest('hex');
+
+      const storedOtpHash =
+        results[0].reset_otp_hash;
+
+      const submittedBuffer =
+        Buffer.from(submittedOtpHash, 'hex');
+
+      const storedBuffer =
+        Buffer.from(storedOtpHash, 'hex');
+
+      const otpMatches =
+        submittedBuffer.length === storedBuffer.length &&
+        crypto.timingSafeEqual(
+          submittedBuffer,
+          storedBuffer
+        );
+
+      if (!otpMatches) {
+        return res.status(400).json({
+          message:
+            'Verification code is invalid or expired'
+        });
+      }
+
+      User.updatePassword(
+        email,
+        newPassword,
+        updateError => {
+          if (updateError) {
+            console.error(
+              'Password update error:',
+              updateError
+            );
+
+            return res.status(500).json({
+              message:
+                'Password could not be updated'
+            });
+          }
+
+          return res.status(200).json({
+            message:
+              'Password updated successfully. You can now log in.'
+          });
+        }
+      );
+    }
+  );
+};
+
+
 module.exports = {
   signup,
   createSignupOrder,
   verifySignupPayment,
-  login
+  login,
+  forgotPassword,
+  resetPassword
 };
